@@ -152,14 +152,13 @@ export function EMICalculator() {
                                     <select
                                         value={tenureUnit}
                                         onChange={(e) => {
-                                            const newUnit = e.target.value as 'years' | 'months';
+                                            const newUnit = e.target.value as TenureUnit;
                                             if (calcMode === 'emi') {
                                                 if (newUnit === 'months' && tenureUnit === 'years') setTenure(tenure * 12);
                                                 if (newUnit === 'years' && tenureUnit === 'months') setTenure(Number((tenure / 12).toFixed(2)));
                                             }
                                             setTenureUnit(newUnit);
                                         }}
-                                        disabled={calcMode === 'tenure'}
                                         style={{
                                             padding: '0.125rem 0.25rem',
                                             border: '1px solid var(--color-border)',
@@ -167,8 +166,8 @@ export function EMICalculator() {
                                             backgroundColor: 'var(--color-bg-surface)',
                                             color: 'var(--color-text-primary)',
                                             fontSize: '0.75rem',
-                                            cursor: calcMode === 'tenure' ? 'not-allowed' : 'pointer',
-                                            opacity: calcMode === 'tenure' ? 0.7 : 1
+                                            cursor: 'pointer',
+                                            opacity: 1
                                         }}
                                     >
                                         <option value="years">Years</option>
@@ -176,7 +175,7 @@ export function EMICalculator() {
                                     </select>
                                 }
                                 type="number"
-                                value={calcMode === 'tenure' ? (tenureUnit === 'years' ? activeTenure : Math.ceil(activeTenure * 12)) : tenure}
+                                value={calcMode === 'tenure' ? (tenureUnit === 'years' ? activeTenure : Math.round(activeTenure * 12)) : tenure}
                                 onChange={(e) => setTenure(Number(e.target.value))}
                                 min={0.1}
                                 max={tenureUnit === 'months' ? 1200 : 100}
@@ -281,7 +280,7 @@ export function EMICalculator() {
                             </div>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                                 <span className={styles.resultLabel}>Loan Tenure</span>
-                                <span className={styles.resultValue} style={{ fontSize: '1.125rem' }}>{activeTenure === Infinity ? 'Infinite / Unpaid' : `${Math.floor(activeTenure)} Yrs, ${Math.ceil((activeTenure % 1) * 12)} Mos`}</span>
+                                <span className={styles.resultValue} style={{ fontSize: '1.125rem' }}>{activeTenure === Infinity ? 'Infinite / Unpaid' : `${Math.floor(Math.round(activeTenure * 12) / 12)} Yrs, ${Math.round(activeTenure * 12) % 12} Mos (${Math.round(activeTenure * 12)} Months)`}</span>
                             </div>
                         </div>
 
@@ -304,7 +303,7 @@ export function EMICalculator() {
                                 <div className={styles.resultItem}>
                                     <span className={styles.resultLabel}>Time Saved</span>
                                     <span className={styles.resultValue} style={{ fontSize: '1.25rem', fontWeight: 600 }}>
-                                        {Math.floor(prepaymentResult.monthsSaved / 12)} Yrs, {prepaymentResult.monthsSaved % 12} Mos
+                                        {Math.floor(prepaymentResult.monthsSaved / 12)} Yrs, {prepaymentResult.monthsSaved % 12} Mos ({prepaymentResult.monthsSaved} Months)
                                     </span>
                                 </div>
 
@@ -313,7 +312,7 @@ export function EMICalculator() {
                                 <div className={styles.resultItem}>
                                     <span className={styles.resultLabel}>Revised Tenure</span>
                                     <span className={styles.resultValue}>
-                                        {Math.floor(prepaymentResult.newTenureMonths / 12)} Yrs, {prepaymentResult.newTenureMonths % 12} Mos
+                                        {Math.floor(prepaymentResult.newTenureMonths / 12)} Yrs, {prepaymentResult.newTenureMonths % 12} Mos ({prepaymentResult.newTenureMonths} Months)
                                     </span>
                                 </div>
                             </div>
