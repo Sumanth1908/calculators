@@ -1,0 +1,173 @@
+.wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-6);
+    width: 100%;
+    min-width: 0;
+}
+
+.container {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-6);
+    width: 100%;
+}
+
+.inputCard {
+    flex: 1;
+}
+
+.resultCard {
+    flex: 1;
+    background: linear-gradient(135deg, var(--color-primary-50), var(--color-bg-surface));
+    border-color: var(--color-primary-100);
+}
+
+[data-theme='dark'] .resultCard {
+    background: linear-gradient(135deg, var(--color-bg-subtle), var(--color-bg-surface));
+    border-color: var(--color-border);
+}
+
+.inputsGrid {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-2);
+}
+
+.actions {
+    margin-top: var(--spacing-4);
+    display: flex;
+    justify-content: flex-end;
+}
+
+.resultItem {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-3) 0;
+}
+
+.resultLabel {
+    color: var(--color-text-secondary);
+    font-weight: 500;
+}
+
+.resultValue {
+    color: var(--color-text-primary);
+    font-weight: 600;
+    font-size: 1.125rem;
+}
+
+.highlight {
+    color: var(--color-primary-600);
+    font-size: 2rem;
+    font-weight: 800;
+}
+
+.divider {
+    border: 0;
+    height: 1px;
+    background-color: var(--color-border);
+    margin: var(--spacing-4) 0;
+}
+
+.resultGrid {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-2);
+}
+
+.resultItemTotal {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: var(--spacing-4);
+    padding-top: var(--spacing-4);
+    border-top: 2px dashed var(--color-border);
+}
+
+@media (min-width: 768px) {
+    .container {
+        flex-direction: row;
+        align-items: stretch;
+    }
+}
+
+.scheduleContainer {
+    background-color: var(--color-bg-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-xl);
+    overflow: hidden;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-shadow: var(--shadow-sm);
+    animation: fadeIn var(--transition-normal);
+}
+
+.scheduleHeader {
+    padding: var(--spacing-4) var(--spacing-6);
+    border-bottom: 1px solid var(--color-border);
+    background-color: var(--color-bg-subtle);
+}
+
+.scheduleTitle {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--color-text-primary);
+    margin: 0;
+}
+
+.tableWrapper {
+    overflow-x: auto;
+    max-height: 500px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    width: 100%;
+}
+
+.scheduleTable {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 600px;
+    text-align: right;
+}
+
+.scheduleTable th,
+.scheduleTable td {
+    padding: var(--spacing-3) var(--spacing-6);
+    border-bottom: 1px solid var(--color-border);
+    font-variant-numeric: tabular-nums;
+    font-size: 0.875rem;
+}
+
+.scheduleTable th {
+    background-color: var(--color-bg-surface);
+    color: var(--color-text-secondary);
+    font-weight: 600;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    box-shadow: 0 1px 0 var(--color-border);
+}
+
+.scheduleTable th:first-child,
+.scheduleTable td:first-child {
+    text-align: left;
+}
+
+.scheduleTable tbody tr:hover {
+    background-color: var(--color-bg-subtle);
+}
+
+.twoCol {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--spacing-4);
+}
+
+@media (min-width: 640px) {
+    .twoCol {
+        grid-template-columns: 1fr 1fr;
+    }
+}
