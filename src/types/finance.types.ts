@@ -39,3 +39,6 @@ export interface CompoundInterestScheduleRow {
 export type PrepaymentFrequency = 'daily' | 'monthly' | 'quarterly' | 'yearly';
 export type TenureUnit = 'years' | 'months';
 export type CalcMode = 'emi' | 'tenure';
+
+export type CompoundingFrequency = 1 | 2 | 4 | 12;
+export type PayoutFrequency = 'maturity' | '1' | '2' | '4' | '12';

@@ -4,7 +4,9 @@ import type {
     PrepaymentResult,
     AmortizationScheduleRow,
     CompoundInterestScheduleRow,
-    PrepaymentFrequency
+    PrepaymentFrequency,
+    CompoundingFrequency,
+    PayoutFrequency
 } from '../types/finance.types';
 
 export type {
@@ -13,7 +15,9 @@ export type {
     PrepaymentResult,
     AmortizationScheduleRow,
     CompoundInterestScheduleRow,
-    PrepaymentFrequency
+    PrepaymentFrequency,
+    CompoundingFrequency,
+    PayoutFrequency
 };
 
 /**
@@ -69,8 +73,8 @@ export function calculateCompoundInterest(
     principal: number,
     annualRate: number,
     timeYears: number,
-    compoundingFrequency: number = 1,
-    payoutFrequency: string = 'maturity' // Default to payout at maturity
+    compoundingFrequency: CompoundingFrequency = 1,
+    payoutFrequency: PayoutFrequency = 'maturity' // Default to payout at maturity
 ): CompoundInterestDetails {
     if (principal <= 0 || annualRate <= 0 || timeYears <= 0) {
         return { totalAmount: 0, totalInterest: 0 };
@@ -261,9 +265,9 @@ export function calculateCompoundInterestSchedule(
     principal: number,
     annualRate: number,
     timeYears: number,
-    compoundingFrequency: number = 1,
+    compoundingFrequency: CompoundingFrequency = 1,
     startDate: Date = new Date(),
-    payoutFrequency: string = 'maturity'
+    payoutFrequency: PayoutFrequency = 'maturity'
 ): CompoundInterestScheduleRow[] {
     if (principal <= 0 || annualRate <= 0 || timeYears <= 0) {
         return [];

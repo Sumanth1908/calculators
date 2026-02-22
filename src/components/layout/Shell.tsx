@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Calculator, Moon, Sun, Menu, X, Github, Linkedin } from 'lucide-react';
+import { Calculator, Moon, Sun, Menu, X, RefreshCw } from 'lucide-react';
 import styles from './Shell.module.css';
 
 interface ShellProps {
@@ -24,6 +24,11 @@ export function Shell({ children, navItems, activeTab, onTabChange }: ShellProps
         setIsDarkMode(newTheme);
         document.documentElement.setAttribute('data-theme', newTheme ? 'dark' : 'light');
         localStorage.setItem('theme', newTheme ? 'dark' : 'light');
+    };
+
+    const handleResetApp = () => {
+        localStorage.clear();
+        window.location.reload();
     };
 
     return (
@@ -101,20 +106,19 @@ export function Shell({ children, navItems, activeTab, onTabChange }: ShellProps
                         )}
                     </button>
 
+                    <button className={styles.resetButton} onClick={handleResetApp}>
+                        <RefreshCw size={20} />
+                        <span>Reset App</span>
+                    </button>
+
                     <div className={styles.authorBlock}>
                         <span className={styles.authorText}>
                             Made with ❤️ by{' '}
                             <a href="https://linkedin.com/in/sumanthjillepally" target="_blank" rel="noopener noreferrer" className={styles.authorName}>
                                 Sumanth
-                            </a>
+                            </a> using Antigravity
                         </span>
                         <div className={styles.authorLinks}>
-                            <a href="https://github.com/Sumanth1908" target="_blank" rel="noopener noreferrer" className={styles.authorLink} aria-label="GitHub">
-                                <Github size={18} />
-                            </a>
-                            <a href="https://linkedin.com/in/sumanthjillepally" target="_blank" rel="noopener noreferrer" className={styles.authorLink} aria-label="LinkedIn">
-                                <Linkedin size={18} />
-                            </a>
                             <a href="https://buymeacoffee.com/sumanth_js" target="_blank" rel="noopener noreferrer" aria-label="Buy Me A Coffee" style={{ marginTop: '0.5rem' }}>
                                 <img
                                     src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png"

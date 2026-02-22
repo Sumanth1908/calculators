@@ -152,6 +152,31 @@
     color: var(--color-text-primary);
 }
 
+.resetButton {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-3);
+    width: 100%;
+    padding: var(--spacing-3) var(--spacing-4);
+    border-radius: var(--radius-md);
+    color: var(--color-text-secondary);
+    font-weight: 500;
+    transition: all var(--transition-fast);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+}
+
+.resetButton:hover {
+    background-color: #fee2e2;
+    color: #dc2626;
+}
+
+[data-theme='dark'] .resetButton:hover {
+    background-color: rgba(220, 38, 38, 0.1);
+    color: #ef4444;
+}
+
 .authorBlock {
     display: flex;
     flex-direction: column;

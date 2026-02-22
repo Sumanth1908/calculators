@@ -3,7 +3,7 @@ import { Card, CardContent, CardTitle, CardHeader } from '../ui/Card';
 import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
 import { calculateCompoundInterest, formatCurrency, calculateCompoundInterestSchedule } from '../../utils/finance';
-import type { CompoundInterestDetails, CompoundInterestScheduleRow } from '../../types/finance.types';
+import type { CompoundInterestDetails, CompoundInterestScheduleRow, CompoundingFrequency, PayoutFrequency } from '../../types/finance.types';
 import { useLocalStorage } from '../../hooks/useLocalStorage';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import styles from './EMI.module.css'; // Reusing EMI styles for layout consistency
@@ -12,8 +12,8 @@ export function CompoundInterestCalculator() {
     const [principal, setPrincipal] = useLocalStorage('ci_principal', 50000);
     const [rate, setRate] = useLocalStorage('ci_rate', 7.5);
     const [time, setTime] = useLocalStorage('ci_time', 5);
-    const [frequency, setFrequency] = useLocalStorage('ci_frequency', 4); // Default to Quarterly Compounding for FDs typically
-    const [payoutFrequency, setPayoutFrequency] = useLocalStorage('ci_payout', 'maturity');
+    const [frequency, setFrequency] = useLocalStorage<CompoundingFrequency>('ci_frequency', 4); // Default to Quarterly Compounding for FDs typically
+    const [payoutFrequency, setPayoutFrequency] = useLocalStorage<PayoutFrequency>('ci_payout', 'maturity');
     const [startDate, setStartDate] = useLocalStorage('ci_start_date', new Date().toISOString().split('T')[0]);
 
     const [ciDetails, setCiDetails] = useState<CompoundInterestDetails>({ totalAmount: 0, totalInterest: 0 });
@@ -96,7 +96,7 @@ export function CompoundInterestCalculator() {
                                     <label style={{ fontSize: '0.875rem', fontWeight: 500, color: 'var(--color-text-primary)' }}>Compounding Frequency</label>
                                     <select
                                         value={frequency}
-                                        onChange={(e) => setFrequency(Number(e.target.value))}
+                                        onChange={(e) => setFrequency(Number(e.target.value) as CompoundingFrequency)}
                                         style={{
                                             width: '100%',
                                             padding: '0.5rem 0.75rem',
@@ -118,7 +118,7 @@ export function CompoundInterestCalculator() {
                                     <label style={{ fontSize: '0.875rem', fontWeight: 500, color: 'var(--color-text-primary)' }}>Payout Frequency</label>
                                     <select
                                         value={payoutFrequency}
-                                        onChange={(e) => setPayoutFrequency(e.target.value)}
+                                        onChange={(e) => setPayoutFrequency(e.target.value as PayoutFrequency)}
                                         style={{
                                             width: '100%',
                                             padding: '0.5rem 0.75rem',
