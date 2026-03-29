@@ -2,13 +2,14 @@
     display: flex;
     flex-direction: column;
     gap: var(--spacing-2);
-    margin-bottom: var(--spacing-4);
 }
 
 .label {
-    font-size: 0.875rem;
-    font-weight: 500;
-    color: var(--color-text-primary);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+    letter-spacing: 0.01em;
+    text-transform: uppercase;
 }
 
 .inputContainer {
@@ -29,22 +30,30 @@
 
 .input {
     width: 100%;
-    padding: var(--spacing-2) var(--spacing-3);
-    border: 1px solid var(--color-border);
+    padding: var(--spacing-3) var(--spacing-3);
+    border: 1.5px solid var(--color-border);
     border-radius: var(--radius-md);
-    background-color: var(--color-bg-surface);
+    background-color: var(--color-bg-subtle);
     color: var(--color-text-primary);
     font-size: 1rem;
-    transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+    font-weight: 500;
+    transition: border-color var(--transition-fast), box-shadow var(--transition-fast), background-color var(--transition-fast);
 }
 
 .input::placeholder {
     color: var(--color-text-muted);
+    font-weight: 400;
+}
+
+.input:hover:not(:disabled) {
+    border-color: var(--color-text-muted);
+    background-color: var(--color-bg-surface);
 }
 
 .input:focus {
     outline: none;
     border-color: var(--color-primary-500);
+    background-color: var(--color-bg-surface);
     box-shadow: 0 0 0 3px var(--color-focus-ring);
 }
 

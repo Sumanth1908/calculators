@@ -1,0 +1,97 @@
+.wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-2);
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.label {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+    letter-spacing: 0.01em;
+    text-transform: uppercase;
+}
+
+.valueBadge {
+    font-size: 0.9375rem;
+    font-weight: 700;
+    color: var(--color-primary-600);
+    background: var(--color-primary-50);
+    padding: 0.1875rem 0.625rem;
+    border-radius: var(--radius-full);
+    min-width: 4rem;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    transition: all var(--transition-fast);
+}
+
+.sliderTrack {
+    position: relative;
+    height: 6px;
+    border-radius: var(--radius-full);
+    background: var(--color-bg-subtle);
+    border: 1px solid var(--color-border);
+    margin: var(--spacing-1) 0;
+    cursor: pointer;
+}
+
+.sliderFill {
+    position: absolute;
+    left: 0;
+    top: 0;
+    height: 100%;
+    border-radius: var(--radius-full);
+    background: linear-gradient(90deg, var(--color-primary-500), var(--color-primary-600));
+    pointer-events: none;
+    transition: width 0.05s;
+}
+
+.slider {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    width: 100%;
+    height: 20px;
+    transform: translateY(-50%);
+    opacity: 0;
+    cursor: pointer;
+    margin: 0;
+    padding: 0;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+.sliderThumb {
+    position: absolute;
+    top: 50%;
+    width: 18px;
+    height: 18px;
+    border-radius: var(--radius-full);
+    background: white;
+    border: 2.5px solid var(--color-primary-600);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.18), 0 0 0 3px transparent;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    transition: box-shadow var(--transition-fast), transform var(--transition-fast);
+}
+
+.sliderTrack:hover .sliderThumb,
+.sliderTrack:focus-within .sliderThumb {
+    box-shadow: 0 1px 4px rgba(0,0,0,0.18), 0 0 0 5px var(--color-focus-ring);
+    transform: translate(-50%, -50%) scale(1.1);
+}
+
+.minMax {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.6875rem;
+    color: var(--color-text-muted);
+    font-variant-numeric: tabular-nums;
+    padding: 0 2px;
+}

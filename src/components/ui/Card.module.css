@@ -9,19 +9,21 @@
 
 .card:hover {
     box-shadow: var(--shadow-md);
+    transform: translateY(-1px);
 }
 
 .cardHeader {
-    padding: var(--spacing-6);
+    padding: var(--spacing-5) var(--spacing-6);
     border-bottom: 1px solid var(--color-border);
-    background-color: var(--color-bg-surface);
+    background: linear-gradient(135deg, var(--color-bg-surface) 60%, var(--color-bg-subtle));
 }
 
 .cardTitle {
-    font-size: 1.25rem;
-    font-weight: 600;
+    font-size: 1.125rem;
+    font-weight: 700;
     color: var(--color-text-primary);
     margin: 0;
+    letter-spacing: -0.02em;
 }
 
 .cardContent {

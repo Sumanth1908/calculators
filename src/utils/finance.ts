@@ -6,7 +6,18 @@ import type {
     CompoundInterestScheduleRow,
     PrepaymentFrequency,
     CompoundingFrequency,
-    PayoutFrequency
+    PayoutFrequency,
+    SIPResult,
+    SIPScheduleRow,
+    SWPResult,
+    SWPScheduleRow,
+    STPResult,
+    STPScheduleRow,
+    PPFResult,
+    PPFScheduleRow,
+    RDResult,
+    RDScheduleRow,
+    GoalResult
 } from '../types/finance.types';
 
 export type {
@@ -17,7 +28,18 @@ export type {
     CompoundInterestScheduleRow,
     PrepaymentFrequency,
     CompoundingFrequency,
-    PayoutFrequency
+    PayoutFrequency,
+    SIPResult,
+    SIPScheduleRow,
+    SWPResult,
+    SWPScheduleRow,
+    STPResult,
+    STPScheduleRow,
+    PPFResult,
+    PPFScheduleRow,
+    RDResult,
+    RDScheduleRow,
+    GoalResult
 };
 
 /**
@@ -261,6 +283,338 @@ export function calculateAmortizationSchedule(principal: number, annualRate: num
     return schedule;
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// SIP Calculator
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Calculates Systematic Investment Plan (SIP) returns with optional annual step-up.
+ * @param monthlyInvestment - monthly SIP amount
+ * @param annualReturn - expected annual return in %
+ * @param years - investment duration in years
+ * @param annualStepUpPercent - percentage by which SIP increases every year (0 for none)
+ */
+export function calculateSIP(
+    monthlyInvestment: number,
+    annualReturn: number,
+    years: number,
+    annualStepUpPercent: number = 0
+): SIPResult {
+    if (monthlyInvestment <= 0 || annualReturn <= 0 || years <= 0) {
+        return { investedAmount: 0, estimatedReturns: 0, totalValue: 0 };
+    }
+
+    const monthlyRate = annualReturn / 12 / 100;
+    const totalMonths = years * 12;
+    let totalValue = 0;
+    let totalInvested = 0;
+    let currentSIP = monthlyInvestment;
+
+    for (let month = 1; month <= totalMonths; month++) {
+        if (month > 1 && (month - 1) % 12 === 0 && annualStepUpPercent > 0) {
+            currentSIP = currentSIP * (1 + annualStepUpPercent / 100);
+        }
+        totalInvested += currentSIP;
+        const monthsRemaining = totalMonths - month;
+        totalValue += currentSIP * Math.pow(1 + monthlyRate, monthsRemaining + 1);
+    }
+
+    return {
+        investedAmount: totalInvested,
+        estimatedReturns: totalValue - totalInvested,
+        totalValue
+    };
+}
+
+export function calculateSIPSchedule(
+    monthlyInvestment: number,
+    annualReturn: number,
+    years: number,
+    annualStepUpPercent: number = 0,
+    startDate: Date = new Date()
+): SIPScheduleRow[] {
+    if (monthlyInvestment <= 0 || annualReturn <= 0 || years <= 0) return [];
+
+    const monthlyRate = annualReturn / 12 / 100;
+    const totalMonths = years * 12;
+    const schedule: SIPScheduleRow[] = [];
+    let corpus = 0;
+    let totalInvested = 0;
+    let currentSIP = monthlyInvestment;
+
+    for (let month = 1; month <= totalMonths; month++) {
+        if (month > 1 && (month - 1) % 12 === 0 && annualStepUpPercent > 0) {
+            currentSIP = currentSIP * (1 + annualStepUpPercent / 100);
+        }
+        const returnThisMonth = corpus * monthlyRate;
+        corpus = corpus + returnThisMonth + currentSIP;
+        totalInvested += currentSIP;
+
+        schedule.push({
+            month,
+            date: formatDateMonthYear(addMonths(startDate, month)),
+            investment: currentSIP,
+            returns: returnThisMonth,
+            totalInvested,
+            totalValue: corpus
+        });
+    }
+
+    return schedule;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SWP (Systematic Withdrawal Plan) Calculator
+// ─────────────────────────────────────────────────────────────────────────────
+
+export function calculateSWP(
+    initialCorpus: number,
+    monthlyWithdrawal: number,
+    annualReturn: number,
+    years: number
+): SWPResult {
+    if (initialCorpus <= 0 || monthlyWithdrawal <= 0) {
+        return { totalWithdrawn: 0, totalReturns: 0, finalCorpus: 0, monthsLasted: 0 };
+    }
+
+    const monthlyRate = annualReturn / 12 / 100;
+    const totalMonths = years * 12;
+    let corpus = initialCorpus;
+    let totalWithdrawn = 0;
+    let totalReturns = 0;
+    let monthsLasted = 0;
+
+    for (let month = 1; month <= totalMonths; month++) {
+        if (corpus <= 0) break;
+        const returns = corpus * monthlyRate;
+        totalReturns += returns;
+        corpus += returns;
+        const withdrawal = Math.min(monthlyWithdrawal, corpus);
+        corpus -= withdrawal;
+        totalWithdrawn += withdrawal;
+        monthsLasted = month;
+    }
+
+    return {
+        totalWithdrawn,
+        totalReturns,
+        finalCorpus: Math.max(0, corpus),
+        monthsLasted
+    };
+}
+
+export function calculateSWPSchedule(
+    initialCorpus: number,
+    monthlyWithdrawal: number,
+    annualReturn: number,
+    years: number,
+    startDate: Date = new Date()
+): SWPScheduleRow[] {
+    if (initialCorpus <= 0 || monthlyWithdrawal <= 0) return [];
+
+    const monthlyRate = annualReturn / 12 / 100;
+    const totalMonths = years * 12;
+    const schedule: SWPScheduleRow[] = [];
+    let corpus = initialCorpus;
+
+    for (let month = 1; month <= totalMonths; month++) {
+        if (corpus <= 0) break;
+        const returns = corpus * monthlyRate;
+        corpus += returns;
+        const withdrawal = Math.min(monthlyWithdrawal, corpus);
+        corpus -= withdrawal;
+
+        schedule.push({
+            month,
+            date: formatDateMonthYear(addMonths(startDate, month)),
+            withdrawal,
+            returns,
+            closingBalance: Math.max(0, corpus)
+        });
+    }
+
+    return schedule;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// STP (Systematic Transfer Plan) Calculator
+// ─────────────────────────────────────────────────────────────────────────────
+
+export function calculateSTP(
+    sourceCorpus: number,
+    monthlyTransfer: number,
+    sourceAnnualReturn: number,
+    targetAnnualReturn: number,
+    years: number
+): STPResult {
+    if (sourceCorpus <= 0 || monthlyTransfer <= 0) {
+        return { totalTransferred: 0, sourceCorpusFinal: 0, targetCorpusFinal: 0, totalGains: 0 };
+    }
+
+    const sourceMonthlyRate = sourceAnnualReturn / 12 / 100;
+    const targetMonthlyRate = targetAnnualReturn / 12 / 100;
+    const totalMonths = years * 12;
+    let source = sourceCorpus;
+    let target = 0;
+
+    for (let month = 1; month <= totalMonths; month++) {
+        if (source <= 0) break;
+        source += source * sourceMonthlyRate;
+        const transfer = Math.min(monthlyTransfer, source);
+        source -= transfer;
+        target += transfer;
+        target += target * targetMonthlyRate;
+    }
+
+    const totalTransferred = Math.min(sourceCorpus, monthlyTransfer * totalMonths);
+    return {
+        totalTransferred,
+        sourceCorpusFinal: Math.max(0, source),
+        targetCorpusFinal: target,
+        totalGains: source + target - sourceCorpus
+    };
+}
+
+export function calculateSTPSchedule(
+    sourceCorpus: number,
+    monthlyTransfer: number,
+    sourceAnnualReturn: number,
+    targetAnnualReturn: number,
+    years: number,
+    startDate: Date = new Date()
+): STPScheduleRow[] {
+    if (sourceCorpus <= 0 || monthlyTransfer <= 0) return [];
+
+    const sourceMonthlyRate = sourceAnnualReturn / 12 / 100;
+    const targetMonthlyRate = targetAnnualReturn / 12 / 100;
+    const totalMonths = years * 12;
+    const schedule: STPScheduleRow[] = [];
+    let source = sourceCorpus;
+    let target = 0;
+
+    for (let month = 1; month <= totalMonths; month++) {
+        if (source <= 0) break;
+        source += source * sourceMonthlyRate;
+        const transfer = Math.min(monthlyTransfer, source);
+        source -= transfer;
+        target += transfer;
+        target += target * targetMonthlyRate;
+
+        schedule.push({
+            month,
+            date: formatDateMonthYear(addMonths(startDate, month)),
+            transferAmount: transfer,
+            sourceBalance: Math.max(0, source),
+            targetBalance: target
+        });
+    }
+
+    return schedule;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PPF (Public Provident Fund) Calculator
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * PPF interest is calculated on the minimum balance between 5th and end of the month,
+ * compounded annually. We simplify by computing interest on the yearly balance.
+ */
+export function calculatePPF(
+    yearlyInvestment: number,
+    annualRate: number = 7.1,
+    years: number = 15
+): PPFResult {
+    if (yearlyInvestment <= 0) return { totalInvested: 0, totalInterest: 0, maturityAmount: 0 };
+
+    const rate = annualRate / 100;
+    let balance = 0;
+    let totalInvested = 0;
+
+    for (let year = 1; year <= years; year++) {
+        balance += yearlyInvestment;
+        totalInvested += yearlyInvestment;
+        balance += balance * rate;
+    }
+
+    return {
+        totalInvested,
+        totalInterest: balance - totalInvested,
+        maturityAmount: balance
+    };
+}
+
+export function calculatePPFSchedule(
+    yearlyInvestment: number,
+    annualRate: number = 7.1,
+    years: number = 15
+): PPFScheduleRow[] {
+    if (yearlyInvestment <= 0) return [];
+
+    const rate = annualRate / 100;
+    const schedule: PPFScheduleRow[] = [];
+    let balance = 0;
+
+    for (let year = 1; year <= years; year++) {
+        const opening = balance;
+        balance += yearlyInvestment;
+        const interest = balance * rate;
+        balance += interest;
+
+        schedule.push({
+            year,
+            openingBalance: opening,
+            investment: yearlyInvestment,
+            interestEarned: interest,
+            closingBalance: balance
+        });
+    }
+
+    return schedule;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Goal-Based Savings Calculator
+// ─────────────────────────────────────────────────────────────────────────────
+
+export function calculateGoalSavings(
+    targetAmount: number,
+    annualReturn: number,
+    years: number,
+    inflationRate: number = 0
+): GoalResult {
+    if (targetAmount <= 0 || years <= 0) {
+        return { monthlyInvestmentRequired: 0, totalInvested: 0, totalReturns: 0, targetAmount };
+    }
+
+    // Inflation-adjusted target
+    const adjustedTarget = inflationRate > 0
+        ? targetAmount * Math.pow(1 + inflationRate / 100, years)
+        : targetAmount;
+
+    const monthlyRate = annualReturn / 12 / 100;
+    const totalMonths = years * 12;
+
+    // PMT formula: SIP needed to reach a future value
+    let monthlyInvestmentRequired = 0;
+    if (monthlyRate === 0) {
+        monthlyInvestmentRequired = adjustedTarget / totalMonths;
+    } else {
+        monthlyInvestmentRequired =
+            (adjustedTarget * monthlyRate) /
+            (Math.pow(1 + monthlyRate, totalMonths) - 1);
+    }
+
+    const totalInvested = monthlyInvestmentRequired * totalMonths;
+
+    return {
+        monthlyInvestmentRequired,
+        totalInvested,
+        totalReturns: adjustedTarget - totalInvested,
+        targetAmount: adjustedTarget
+    };
+}
+
 export function calculateCompoundInterestSchedule(
     principal: number,
     annualRate: number,
@@ -318,6 +672,91 @@ export function calculateCompoundInterestSchedule(
                 totalAmount: principal + cumulativeInterest // Current Total Net Worth from this FD
             });
         }
+    }
+
+    return schedule;
+}
+
+/**
+ * Calculates Recurring Deposit (RD) maturity value.
+ * Uses the standard Indian banking quarterly compounding formula:
+ * M = R × [(1 + i)^n - 1] / (1 - (1 + i)^(-1/3))
+ * Where:
+ *   R = monthly instalment, i = quarterly interest rate, n = quarters
+ *
+ * Simplified equivalent used here: month-by-month compound accumulation.
+ */
+export function calculateRD(
+    monthly: number,
+    annualRate: number,
+    tenureMonths: number
+): RDResult {
+    if (monthly <= 0 || annualRate <= 0 || tenureMonths <= 0) {
+        return { totalInvested: 0, totalInterest: 0, maturityAmount: 0 };
+    }
+
+    // Standard RD formula used by Indian banks (quarterly compounding)
+    // i = quarterly rate, n = number of quarters
+    const quarterlyRate = annualRate / 400; // annualRate/4/100
+    const quarters = tenureMonths / 3;
+
+    // Each monthly instalment compounds from when it was deposited to maturity
+    // M = R × [(1+i)^n - 1] / [1 - (1+i)^(-1/3)]
+    const maturityAmount =
+        monthly *
+        (Math.pow(1 + quarterlyRate, quarters) - 1) /
+        (1 - Math.pow(1 + quarterlyRate, -1 / 3));
+
+    const totalInvested = monthly * tenureMonths;
+    const totalInterest = maturityAmount - totalInvested;
+
+    return {
+        totalInvested: isNaN(totalInvested) ? 0 : totalInvested,
+        totalInterest: isNaN(totalInterest) ? 0 : Math.max(0, totalInterest),
+        maturityAmount: isNaN(maturityAmount) ? 0 : maturityAmount,
+    };
+}
+
+/**
+ * Generates a month-by-month RD schedule.
+ * Each month a new instalment is deposited and all previous instalments earn interest.
+ */
+export function calculateRDSchedule(
+    monthly: number,
+    annualRate: number,
+    tenureMonths: number,
+    startDate: Date = new Date()
+): RDScheduleRow[] {
+    if (monthly <= 0 || annualRate <= 0 || tenureMonths <= 0) return [];
+
+    const schedule: RDScheduleRow[] = [];
+    const monthlyRate = annualRate / 12 / 100;
+    // Each instalment deposited at month k earns interest for (tenureMonths - k + 1) months
+    // We approximate running maturity value as sum of each instalment's compound growth
+    let runningMaturity = 0;
+
+    for (let m = 1; m <= tenureMonths; m++) {
+        const remainingMonths = tenureMonths - m + 1;
+        const futurePrincipal = monthly * Math.pow(1 + monthlyRate, remainingMonths);
+        runningMaturity += futurePrincipal;
+
+        // For schedule display: show the accumulated value up to this month
+        // (all instalments so far compounded to current month)
+        let accumulated = 0;
+        for (let k = 1; k <= m; k++) {
+            accumulated += monthly * Math.pow(1 + monthlyRate, m - k + 1);
+        }
+        const totalInvestedSoFar = monthly * m;
+        const interestSoFar = accumulated - totalInvestedSoFar;
+
+        schedule.push({
+            month: m,
+            date: formatDateMonthYear(addMonths(startDate, m - 1)),
+            investment: monthly,
+            interestEarned: interestSoFar,
+            totalInvested: totalInvestedSoFar,
+            maturityValue: accumulated,
+        });
     }
 
     return schedule;
