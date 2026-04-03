@@ -132,17 +132,20 @@ function FDCalculator() {
                         <div className={styles.twoCol} style={{ marginBottom: '1rem' }}>
                             <Input
                                 label="Principal Amount (₹)"
-                                type="number"
-                                value={principal}
-                                onChange={(e) => setPrincipal(Number(e.target.value))}
-                                min={0}
+                                type="text"
+                                inputMode="numeric"
+                                value={principal === 0 ? '' : new Intl.NumberFormat('en-IN').format(principal)}
+                                onChange={(e) => {
+                                    const rawVal = e.target.value.replace(/[^0-9]/g, '');
+                                    setPrincipal(rawVal === '' ? 0 : parseInt(rawVal, 10));
+                                }}
                             />
                             <Input
                                 label="Interest Rate (% p.a.)"
                                 type="number"
                                 step="0.1"
-                                value={rate}
-                                onChange={(e) => setRate(Number(e.target.value))}
+                                value={rate === 0 ? '' : rate}
+                                onChange={(e) => setRate(e.target.value === '' ? 0 : Number(e.target.value))}
                                 min={0}
                                 max={25}
                             />
@@ -157,8 +160,8 @@ function FDCalculator() {
                                         value={tenureUnit}
                                         onChange={(e) => {
                                             const newUnit = e.target.value as TenureUnit;
-                                            if (newUnit === 'months' && tenureUnit === 'years') setTenure(tenure * 12);
-                                            if (newUnit === 'years' && tenureUnit === 'months') setTenure(Number((tenure / 12).toFixed(2)));
+                                            if (newUnit === 'months' && tenureUnit === 'years') setTenure(Math.round(tenure * 12));
+                                            if (newUnit === 'years' && tenureUnit === 'months') setTenure(Math.max(1, Math.round(tenure / 12)));
                                             setTenureUnit(newUnit);
                                         }}
                                         style={tenureSelectStyle}
@@ -168,8 +171,8 @@ function FDCalculator() {
                                     </select>
                                 }
                                 type="number"
-                                value={tenure}
-                                onChange={(e) => setTenure(Number(e.target.value))}
+                                value={tenure === 0 ? '' : tenure}
+                                onChange={(e) => setTenure(e.target.value === '' ? 0 : Math.round(Number(e.target.value)))}
                                 min={1}
                                 max={tenureUnit === 'months' ? 240 : 20}
                             />
@@ -391,17 +394,20 @@ function RDCalculator() {
                         <div className={styles.twoCol} style={{ marginBottom: '1rem' }}>
                             <Input
                                 label="Monthly Instalment (₹)"
-                                type="number"
-                                value={monthly}
-                                onChange={(e) => setMonthly(Number(e.target.value))}
-                                min={100}
+                                type="text"
+                                inputMode="numeric"
+                                value={monthly === 0 ? '' : new Intl.NumberFormat('en-IN').format(monthly)}
+                                onChange={(e) => {
+                                    const rawVal = e.target.value.replace(/[^0-9]/g, '');
+                                    setMonthly(rawVal === '' ? 0 : parseInt(rawVal, 10));
+                                }}
                             />
                             <Input
                                 label="Interest Rate (% p.a.)"
                                 type="number"
                                 step="0.1"
-                                value={rate}
-                                onChange={(e) => setRate(Number(e.target.value))}
+                                value={rate === 0 ? '' : rate}
+                                onChange={(e) => setRate(e.target.value === '' ? 0 : Number(e.target.value))}
                                 min={0}
                                 max={20}
                             />
@@ -416,8 +422,8 @@ function RDCalculator() {
                                         value={tenureUnit}
                                         onChange={(e) => {
                                             const newUnit = e.target.value as TenureUnit;
-                                            if (newUnit === 'years' && tenureUnit === 'months') setTenure(Number((tenure / 12).toFixed(2)));
-                                            if (newUnit === 'months' && tenureUnit === 'years') setTenure(tenure * 12);
+                                            if (newUnit === 'years' && tenureUnit === 'months') setTenure(Math.max(1, Math.round(tenure / 12)));
+                                            if (newUnit === 'months' && tenureUnit === 'years') setTenure(Math.round(tenure * 12));
                                             setTenureUnit(newUnit);
                                         }}
                                         style={tenureSelectStyle}
@@ -427,8 +433,8 @@ function RDCalculator() {
                                     </select>
                                 }
                                 type="number"
-                                value={tenure}
-                                onChange={(e) => setTenure(Number(e.target.value))}
+                                value={tenure === 0 ? '' : tenure}
+                                onChange={(e) => setTenure(e.target.value === '' ? 0 : Math.round(Number(e.target.value)))}
                                 min={1}
                                 max={tenureUnit === 'months' ? 120 : 10}
                             />

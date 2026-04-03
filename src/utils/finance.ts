@@ -148,7 +148,7 @@ export function calculatePrepaymentImpact(
 ): PrepaymentResult {
     const emiDetails = calculateEMI(principal, annualRate, tenureYears);
     const monthlyRate = annualRate / 12 / 100;
-    const originalTenureMonths = tenureYears * 12;
+    const originalTenureMonths = Math.round(tenureYears * 12);
 
     let balance = principal;
     let newTotalInterest = 0;

@@ -16,9 +16,8 @@ export function EMICalculator() {
     const [startDate, setStartDate] = useLocalStorage('emi_start_date', new Date().toISOString().split('T')[0]);
 
     // Prepayment States
-    const [monthlyPrepayment, setMonthlyPrepayment] = useLocalStorage('pre_monthly', 0);
-    const [prepaymentFrequency, setPrepaymentFrequency] = useLocalStorage<PrepaymentFrequency>('pre_frequency', 'monthly');
-    const [lumpSumAmount, setLumpSumAmount] = useLocalStorage('pre_lumpsum', 0);
+    const [prepaymentAmount, setPrepaymentAmount] = useLocalStorage('pre_amount', 0);
+    const [prepaymentFrequency, setPrepaymentFrequency] = useLocalStorage<string>('pre_frequency', 'monthly');
     const [lumpSumMonth, setLumpSumMonth] = useLocalStorage('pre_lumpsum_month', 12);
 
     const [emiDetails, setEmiDetails] = useState({ emi: 0, totalInterest: 0, totalPayment: 0 });
@@ -35,8 +34,8 @@ export function EMICalculator() {
     const activeEmi = useMemo(() => calcMode === 'emi' ? calculateEMI(principal, rate, tenureInYears).emi : customEmi, [calcMode, principal, rate, tenureInYears, customEmi]);
 
     useEffect(() => {
-        if (activeTenure === Infinity) {
-            setEmiDetails({ emi: activeEmi, totalInterest: Infinity, totalPayment: Infinity });
+        if (!activeTenure || activeTenure === Infinity) {
+            setEmiDetails({ emi: activeEmi || 0, totalInterest: activeTenure === Infinity ? Infinity : 0, totalPayment: activeTenure === Infinity ? Infinity : 0 });
             setPrepaymentResult(null);
             return;
         }
@@ -45,22 +44,27 @@ export function EMICalculator() {
             ? calculateEMI(principal, rate, tenureInYears)
             : (function () {
                 const computedTenure = calculateTenureFromEMI(principal, rate, customEmi);
+                if (computedTenure === Infinity) return { emi: customEmi, totalPayment: Infinity, totalInterest: Infinity };
                 const payment = customEmi * computedTenure * 12;
                 return { emi: customEmi, totalPayment: payment, totalInterest: payment - principal };
             })();
 
         setEmiDetails(details);
 
-        if (monthlyPrepayment > 0 || lumpSumAmount > 0) {
-            const preRes = calculatePrepaymentImpact(principal, rate, activeTenure, monthlyPrepayment, prepaymentFrequency, lumpSumAmount, lumpSumMonth, new Date(startDate));
+        if (prepaymentAmount > 0) {
+            const monthlyPrepaymentForImpact = prepaymentFrequency !== 'one-time' ? prepaymentAmount : 0;
+            const lumpSumForImpact = prepaymentFrequency === 'one-time' ? prepaymentAmount : 0;
+            const freqForImpact = (prepaymentFrequency === 'one-time' ? 'monthly' : prepaymentFrequency) as PrepaymentFrequency;
+
+            const preRes = calculatePrepaymentImpact(principal, rate, activeTenure, monthlyPrepaymentForImpact, freqForImpact, lumpSumForImpact, lumpSumMonth, new Date(startDate));
             setPrepaymentResult(preRes);
         } else {
             setPrepaymentResult(null);
         }
-    }, [principal, rate, tenureInYears, customEmi, calcMode, monthlyPrepayment, prepaymentFrequency, lumpSumAmount, lumpSumMonth, startDate, activeTenure, activeEmi]);
+    }, [principal, rate, tenureInYears, customEmi, calcMode, prepaymentAmount, prepaymentFrequency, lumpSumMonth, startDate, activeTenure, activeEmi]);
 
     const standardSchedule = useMemo(() => {
-        if (activeTenure === Infinity) return [];
+        if (!activeTenure || activeTenure === Infinity) return [];
         return calculateAmortizationSchedule(principal, rate, activeTenure, emiDetails.emi, new Date(startDate));
     }, [principal, rate, activeTenure, emiDetails.emi, startDate]);
 
@@ -89,10 +93,24 @@ export function EMICalculator() {
         setTenure(20);
         setTenureUnit('years');
         setStartDate(new Date().toISOString().split('T')[0]);
-        setMonthlyPrepayment(0);
+        setPrepaymentAmount(0);
         setPrepaymentFrequency('monthly');
-        setLumpSumAmount(0);
         setLumpSumMonth(12);
+        setCustomEmi(43391);
+    };
+
+    const handleIntChange = (setter: (val: number) => void) => (e: React.ChangeEvent<HTMLInputElement>) => {
+        const rawVal = e.target.value.replace(/[^0-9]/g, '');
+        if (rawVal === '') {
+            setter(0);
+        } else {
+            setter(parseInt(rawVal, 10));
+        }
+    };
+
+    const formatInt = (val: number) => {
+        if (!val || isNaN(val)) return '';
+        return new Intl.NumberFormat('en-IN').format(val);
     };
 
     return (
@@ -121,17 +139,17 @@ export function EMICalculator() {
                         <div className={styles.twoCol} style={{ marginBottom: '1rem' }}>
                             <Input
                                 label="Loan Amount (₹)"
-                                type="number"
-                                value={principal}
-                                onChange={(e) => setPrincipal(Number(e.target.value))}
-                                min={0}
+                                type="text"
+                                inputMode="numeric"
+                                value={formatInt(principal)}
+                                onChange={handleIntChange(setPrincipal)}
                             />
                             <Input
                                 label="Interest Rate (%)"
                                 type="number"
                                 step="0.1"
-                                value={rate}
-                                onChange={(e) => setRate(Number(e.target.value))}
+                                value={rate === 0 ? '' : rate}
+                                onChange={(e) => setRate(e.target.value === '' ? 0 : Number(e.target.value))}
                                 min={0}
                                 max={100}
                             />
@@ -139,10 +157,10 @@ export function EMICalculator() {
                         <div className={styles.twoCol} style={{ marginTop: '1rem' }}>
                             <Input
                                 label={calcMode === 'emi' ? "Computed EMI (₹)" : "Target EMI (₹)"}
-                                type="number"
-                                value={calcMode === 'emi' ? Math.round(activeEmi) : customEmi}
-                                onChange={(e) => setCustomEmi(Number(e.target.value))}
-                                min={1}
+                                type="text"
+                                inputMode="numeric"
+                                value={calcMode === 'emi' ? formatInt(Math.round(activeEmi)) : formatInt(customEmi)}
+                                onChange={calcMode === 'emi' ? undefined : handleIntChange(setCustomEmi)}
                                 disabled={calcMode === 'emi'}
                             />
 
@@ -154,8 +172,8 @@ export function EMICalculator() {
                                         onChange={(e) => {
                                             const newUnit = e.target.value as TenureUnit;
                                             if (calcMode === 'emi') {
-                                                if (newUnit === 'months' && tenureUnit === 'years') setTenure(tenure * 12);
-                                                if (newUnit === 'years' && tenureUnit === 'months') setTenure(Number((tenure / 12).toFixed(2)));
+                                                if (newUnit === 'months' && tenureUnit === 'years') setTenure(Math.round(tenure * 12));
+                                                if (newUnit === 'years' && tenureUnit === 'months') setTenure(Math.max(1, Math.round(tenure / 12)));
                                             }
                                             setTenureUnit(newUnit);
                                         }}
@@ -175,8 +193,10 @@ export function EMICalculator() {
                                     </select>
                                 }
                                 type="number"
-                                value={calcMode === 'tenure' ? (tenureUnit === 'years' ? activeTenure : Math.round(activeTenure * 12)) : tenure}
-                                onChange={(e) => setTenure(Number(e.target.value))}
+                                value={calcMode === 'tenure' 
+                                    ? (activeTenure === 0 ? '' : Math.round(tenureUnit === 'years' ? activeTenure : activeTenure * 12)) 
+                                    : (tenure === 0 ? '' : tenure)}
+                                onChange={(e) => setTenure(e.target.value === '' ? 0 : Math.round(Number(e.target.value)))}
                                 min={0.1}
                                 max={tenureUnit === 'months' ? 1200 : 100}
                                 disabled={calcMode === 'tenure'}
@@ -201,11 +221,11 @@ export function EMICalculator() {
                         <div className={styles.twoCol} style={{ marginBottom: '1rem' }}>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                                 <Input
-                                    label="Recurring Prepayment (₹)"
-                                    type="number"
-                                    value={monthlyPrepayment}
-                                    onChange={(e) => setMonthlyPrepayment(Number(e.target.value))}
-                                    min={0}
+                                    label="Prepayment Amount (₹)"
+                                    type="text"
+                                    inputMode="numeric"
+                                    value={formatInt(prepaymentAmount)}
+                                    onChange={handleIntChange(setPrepaymentAmount)}
                                 />
                             </div>
                             <div className="flex flex-col gap-2" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
@@ -214,7 +234,7 @@ export function EMICalculator() {
                                 </label>
                                 <select
                                     value={prepaymentFrequency}
-                                    onChange={(e) => setPrepaymentFrequency(e.target.value as PrepaymentFrequency)}
+                                    onChange={(e) => setPrepaymentFrequency(e.target.value)}
                                     style={{
                                         width: '100%',
                                         padding: '0.5rem 0.75rem',
@@ -230,26 +250,23 @@ export function EMICalculator() {
                                     <option value="monthly">Monthly</option>
                                     <option value="quarterly">Quarterly</option>
                                     <option value="yearly">Yearly</option>
+                                    <option value="one-time">One-time</option>
                                 </select>
                             </div>
                         </div>
 
-                        <div className={styles.twoCol}>
-                            <Input
-                                label="One-Time Lump Sum (₹)"
-                                type="number"
-                                value={lumpSumAmount}
-                                onChange={(e) => setLumpSumAmount(Number(e.target.value))}
-                                min={0}
-                            />
-                            <Input
-                                label="Paid After (Months)"
-                                type="number"
-                                value={lumpSumMonth}
-                                onChange={(e) => setLumpSumMonth(Number(e.target.value))}
-                                min={1}
-                            />
-                        </div>
+                        {prepaymentFrequency === 'one-time' && (
+                            <div className={styles.twoCol} style={{ marginBottom: '1rem' }}>
+                                <Input
+                                    label="Paid After (Months)"
+                                    type="number"
+                                    value={lumpSumMonth === 0 ? '' : lumpSumMonth}
+                                    onChange={(e) => setLumpSumMonth(e.target.value === '' ? 0 : Number(e.target.value))}
+                                    min={1}
+                                />
+                                <div />
+                            </div>
+                        )}
                         <div className={styles.actions}>
                             <Button variant="outline" onClick={handleReset} fullWidth>Reset</Button>
                         </div>
