@@ -16,7 +16,9 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
                 {(label || labelRightElement) && (
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', minHeight: '1.25rem' }}>
                         {label && <label className={styles.label}>{label}</label>}
-                        {labelRightElement}
+                        <span className={styles.labelMeta}>
+                            {labelRightElement}
+                        </span>
                     </div>
                 )}
                 <div className={styles.inputContainer}>

@@ -12,6 +12,12 @@
     text-transform: uppercase;
 }
 
+.labelMeta {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-2);
+}
+
 .inputContainer {
     position: relative;
     display: flex;
@@ -48,6 +54,16 @@
 .input:hover:not(:disabled) {
     border-color: var(--color-text-muted);
     background-color: var(--color-bg-surface);
+}
+
+.input:disabled {
+    border-style: dashed;
+    border-color: var(--color-border);
+    background-color: color-mix(in srgb, var(--color-bg-subtle) 72%, var(--color-bg-surface));
+    color: var(--color-text-muted);
+    cursor: not-allowed;
+    opacity: 1;
+    box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.12);
 }
 
 .input:focus {
