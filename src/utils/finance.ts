@@ -5,6 +5,7 @@ import type {
     AmortizationScheduleRow,
     CompoundInterestScheduleRow,
     PrepaymentFrequency,
+    PrepaymentReductionMode,
     CompoundingFrequency,
     PayoutFrequency,
     SIPResult,
@@ -27,6 +28,7 @@ export type {
     AmortizationScheduleRow,
     CompoundInterestScheduleRow,
     PrepaymentFrequency,
+    PrepaymentReductionMode,
     CompoundingFrequency,
     PayoutFrequency,
     SIPResult,
@@ -144,13 +146,19 @@ export function calculatePrepaymentImpact(
     recurringFrequency: PrepaymentFrequency,
     lumpSumAmount: number,
     lumpSumMonth: number, // Which month the lump sum is paid
-    startDate: Date = new Date()
+    startDate: Date = new Date(),
+    reductionMode: PrepaymentReductionMode = 'tenure',
+    fixedEmi?: number
 ): PrepaymentResult {
     const emiDetails = calculateEMI(principal, annualRate, tenureYears);
     const monthlyRate = annualRate / 12 / 100;
     const originalTenureMonths = Math.round(tenureYears * 12);
+    const baseEmi = fixedEmi && fixedEmi > 0 ? fixedEmi : emiDetails.emi;
+    const originalSchedule = calculateAmortizationSchedule(principal, annualRate, tenureYears, baseEmi, startDate);
+    const originalTotalInterest = originalSchedule.reduce((total, row) => total + row.interest, 0);
 
     let balance = principal;
+    let currentEmi = baseEmi;
     let newTotalInterest = 0;
     let monthsCount = 0;
 
@@ -165,7 +173,7 @@ export function calculatePrepaymentImpact(
         newTotalInterest += interestForMonth;
 
         // Total paid this month
-        let paymentThisMonth = emiDetails.emi;
+        let paymentThisMonth = currentEmi;
         let extraPaymentAmount = 0;
 
         if (recurringFrequency === 'monthly') {
@@ -189,10 +197,10 @@ export function calculatePrepaymentImpact(
 
         let principalPaidThisMonth = paymentThisMonth - interestForMonth;
 
-        if (principalPaidThisMonth > balance) {
+        if (principalPaidThisMonth > balance || monthsCount === originalTenureMonths) {
             principalPaidThisMonth = balance;
             paymentThisMonth = principalPaidThisMonth + interestForMonth;
-            extraPaymentAmount = paymentThisMonth - emiDetails.emi;
+            extraPaymentAmount = paymentThisMonth - currentEmi;
             if (extraPaymentAmount < 0) extraPaymentAmount = 0;
         }
 
@@ -214,15 +222,22 @@ export function calculatePrepaymentImpact(
         });
 
         if (balance <= 0) break;
+
+        if (reductionMode === 'emi' && extraPaymentAmount > 0) {
+            const remainingMonths = originalTenureMonths - monthsCount;
+            currentEmi = remainingMonths > 0 ? calculateEMI(balance, annualRate, remainingMonths / 12).emi : 0;
+        }
     }
 
     return {
-        originalTotalInterest: emiDetails.totalInterest,
+        originalTotalInterest,
         newTotalInterest,
-        interestSaved: emiDetails.totalInterest - newTotalInterest,
+        interestSaved: originalTotalInterest - newTotalInterest,
         originalTenureMonths,
         newTenureMonths: monthsCount,
         monthsSaved: originalTenureMonths - monthsCount,
+        revisedEmi: currentEmi,
+        emiReduced: Math.max(0, baseEmi - currentEmi),
         schedule
     };
 }
@@ -731,15 +746,7 @@ export function calculateRDSchedule(
 
     const schedule: RDScheduleRow[] = [];
     const monthlyRate = annualRate / 12 / 100;
-    // Each instalment deposited at month k earns interest for (tenureMonths - k + 1) months
-    // We approximate running maturity value as sum of each instalment's compound growth
-    let runningMaturity = 0;
-
     for (let m = 1; m <= tenureMonths; m++) {
-        const remainingMonths = tenureMonths - m + 1;
-        const futurePrincipal = monthly * Math.pow(1 + monthlyRate, remainingMonths);
-        runningMaturity += futurePrincipal;
-
         // For schedule display: show the accumulated value up to this month
         // (all instalments so far compounded to current month)
         let accumulated = 0;

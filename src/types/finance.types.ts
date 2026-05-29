@@ -11,6 +11,8 @@ export interface PrepaymentResult {
     originalTenureMonths: number;
     newTenureMonths: number;
     monthsSaved: number;
+    revisedEmi: number;
+    emiReduced: number;
     schedule: AmortizationScheduleRow[];
 }
 
@@ -37,6 +39,7 @@ export interface CompoundInterestScheduleRow {
 }
 
 export type PrepaymentFrequency = 'daily' | 'monthly' | 'quarterly' | 'yearly';
+export type PrepaymentReductionMode = 'tenure' | 'emi';
 export type TenureUnit = 'years' | 'months';
 export type CalcMode = 'emi' | 'tenure';
 
