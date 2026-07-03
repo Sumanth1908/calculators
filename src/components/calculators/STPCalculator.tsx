@@ -2,7 +2,10 @@ import { useState, useMemo } from 'react';
 import { Card, CardContent, CardTitle, CardHeader } from '../ui/Card';
 import { SliderInput } from '../ui/SliderInput';
 import { Button } from '../ui/Button';
-import { calculateSTP, calculateSTPSchedule, formatCurrency } from '../../utils/finance';
+import { AnimatedNumber } from '../ui/AnimatedNumber';
+import { BreakdownDonut } from '../ui/BreakdownDonut';
+import { ScenarioActions } from '../ui/ScenarioActions';
+import { calculateSTP, calculateSTPSchedule, formatCurrency, formatCompactINR } from '../../utils/finance';
 import type { STPScheduleRow } from '../../types/finance.types';
 import { useLocalStorage } from '../../hooks/useLocalStorage';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
@@ -65,7 +68,7 @@ export function STPCalculator() {
                         <CardTitle>STP — Systematic Transfer Plan</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <div style={{ padding: '0.75rem', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--color-bg-subtle)', color: 'var(--color-text-secondary)', fontSize: '0.875rem', marginBottom: '1rem' }}>
+                        <div style={{ padding: '0.75rem', borderRadius: 'var(--radius-md)', border: 'var(--border-width) solid var(--color-border)', backgroundColor: 'var(--color-bg-subtle)', color: 'var(--color-text-secondary)', fontSize: '0.875rem', marginBottom: '1rem' }}>
                             💡 STP lets you transfer a fixed amount monthly from a <strong>source fund</strong> (e.g., liquid/debt) to a <strong>target fund</strong> (e.g., equity), gradually deploying capital while earning returns on the parked amount.
                         </div>
                         <div className={styles.inputsGrid} style={{ gap: '1.25rem' }}>
@@ -124,12 +127,35 @@ export function STPCalculator() {
 
                 <Card className={styles.resultCard}>
                     <CardHeader>
-                        <CardTitle>STP Summary</CardTitle>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', flexWrap: 'wrap' }}>
+                            <CardTitle>STP Summary</CardTitle>
+                            <ScenarioActions
+                                studio="stp"
+                                studioTitle="STP — Fund Transfer"
+                                title={`${formatCompactINR(sourceCorpus)} · ${formatCompactINR(monthlyTransfer)}/mo · ${years}y`}
+                                inputs={{
+                                    stp_source: sourceCorpus,
+                                    stp_transfer: monthlyTransfer,
+                                    stp_src_rate: sourceReturn,
+                                    stp_tgt_rate: targetReturn,
+                                    stp_years: years,
+                                }}
+                                metrics={[
+                                    { label: 'Total portfolio', display: formatCurrency(result.sourceCorpusFinal + result.targetCorpusFinal, 'en-IN'), value: result.sourceCorpusFinal + result.targetCorpusFinal, kind: 'currency' },
+                                    { label: 'Target fund', display: formatCurrency(result.targetCorpusFinal, 'en-IN'), value: result.targetCorpusFinal, kind: 'currency' },
+                                    { label: 'Total gains', display: formatCurrency(result.totalGains, 'en-IN'), value: result.totalGains, kind: 'currency' },
+                                ]}
+                            />
+                        </div>
                     </CardHeader>
                     <CardContent>
                         <div className={styles.resultItem}>
                             <span className={styles.resultLabel}>Total Portfolio Value</span>
-                            <span className={styles.highlight}>{formatCurrency(result.sourceCorpusFinal + result.targetCorpusFinal, 'en-IN')}</span>
+                            <AnimatedNumber
+                                className={styles.highlight}
+                                value={result.sourceCorpusFinal + result.targetCorpusFinal}
+                                format={(v) => formatCurrency(v, 'en-IN')}
+                            />
                         </div>
 
                         <hr className={styles.divider} />
@@ -137,19 +163,44 @@ export function STPCalculator() {
                         <div className={styles.twoCol} style={{ marginTop: '1rem' }}>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                                 <span className={styles.resultLabel}>Source Fund (Remaining)</span>
-                                <span className={styles.resultValue}>{formatCurrency(result.sourceCorpusFinal, 'en-IN')}</span>
+                                <AnimatedNumber
+                                    className={styles.resultValue}
+                                    value={result.sourceCorpusFinal}
+                                    format={(v) => formatCurrency(v, 'en-IN')}
+                                />
                             </div>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', alignItems: 'flex-end' }}>
                                 <span className={styles.resultLabel}>Target Fund (Built-up)</span>
-                                <span className={styles.resultValue} style={{ color: 'var(--color-success)' }}>{formatCurrency(result.targetCorpusFinal, 'en-IN')}</span>
+                                <AnimatedNumber
+                                    className={styles.resultValue}
+                                    style={{ color: 'var(--color-success)' }}
+                                    value={result.targetCorpusFinal}
+                                    format={(v) => formatCurrency(v, 'en-IN')}
+                                />
                             </div>
                         </div>
 
                         <div className={styles.resultItemTotal}>
                             <span className={styles.resultLabel}>Total Gains</span>
-                            <span className={styles.resultValue} style={{ color: 'var(--color-success)' }}>
-                                +{formatCurrency(result.totalGains, 'en-IN')}
-                            </span>
+                            <AnimatedNumber
+                                className={styles.resultValue}
+                                style={{ color: 'var(--color-success)' }}
+                                value={result.totalGains}
+                                format={(v) => `+${formatCurrency(v, 'en-IN')}`}
+                            />
+                        </div>
+
+                        <div className={styles.donutSection}>
+                            <BreakdownDonut
+                                segments={[
+                                    { name: 'Source Fund', value: result.sourceCorpusFinal, color: 'var(--color-primary-500)' },
+                                    { name: 'Target Fund', value: result.targetCorpusFinal, color: 'var(--color-success)' },
+                                ]}
+                                centerLabel="Portfolio"
+                                centerValue={formatYAxis(result.sourceCorpusFinal + result.targetCorpusFinal)}
+                                formatValue={(v) => formatCurrency(v, 'en-IN')}
+                                height={180}
+                            />
                         </div>
 
                         <div style={{ height: '250px', width: '100%', marginTop: '2rem', marginBottom: '1rem' }}>

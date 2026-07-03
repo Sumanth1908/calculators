@@ -2,7 +2,10 @@ import { useState, useMemo } from 'react';
 import { Card, CardContent, CardTitle, CardHeader } from '../ui/Card';
 import { SliderInput } from '../ui/SliderInput';
 import { Button } from '../ui/Button';
-import { calculateSWP, calculateSWPSchedule, formatCurrency } from '../../utils/finance';
+import { AnimatedNumber } from '../ui/AnimatedNumber';
+import { BreakdownDonut } from '../ui/BreakdownDonut';
+import { ScenarioActions } from '../ui/ScenarioActions';
+import { calculateSWP, calculateSWPSchedule, formatCurrency, formatCompactINR } from '../../utils/finance';
 import type { SWPScheduleRow } from '../../types/finance.types';
 import { useLocalStorage } from '../../hooks/useLocalStorage';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
@@ -107,18 +110,38 @@ export function SWPCalculator() {
 
                 <Card className={styles.resultCard}>
                     <CardHeader>
-                        <CardTitle>Withdrawal Summary</CardTitle>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', flexWrap: 'wrap' }}>
+                            <CardTitle>Withdrawal Summary</CardTitle>
+                            <ScenarioActions
+                                studio="swp"
+                                studioTitle="SWP — Withdrawals"
+                                title={`${formatCompactINR(corpus)} · ${formatCompactINR(monthly)}/mo · ${rate}% · ${years}y`}
+                                inputs={{ swp_corpus: corpus, swp_monthly: monthly, swp_rate: rate, swp_years: years }}
+                                metrics={[
+                                    { label: 'Final corpus', display: isCorpusExhausted ? '₹0 (Exhausted)' : formatCurrency(result.finalCorpus, 'en-IN'), value: result.finalCorpus, kind: 'currency' },
+                                    { label: 'Total withdrawn', display: formatCurrency(result.totalWithdrawn, 'en-IN'), value: result.totalWithdrawn, kind: 'currency' },
+                                    { label: 'Total returns', display: formatCurrency(result.totalReturns, 'en-IN'), value: result.totalReturns, kind: 'currency' },
+                                    { label: 'Months lasted', display: `${result.monthsLasted}`, value: result.monthsLasted, kind: 'number' },
+                                ]}
+                            />
+                        </div>
                     </CardHeader>
                     <CardContent>
                         <div className={styles.resultItem}>
                             <span className={styles.resultLabel}>Final Corpus</span>
-                            <span className={styles.highlight} style={{ color: isCorpusExhausted ? 'var(--color-danger, #ef4444)' : 'var(--color-primary-600)' }}>
-                                {isCorpusExhausted ? '₹0 (Exhausted)' : formatCurrency(result.finalCorpus, 'en-IN')}
-                            </span>
+                            {isCorpusExhausted ? (
+                                <span className={styles.highlightDanger}>₹0 (Exhausted)</span>
+                            ) : (
+                                <AnimatedNumber
+                                    className={styles.highlight}
+                                    value={result.finalCorpus}
+                                    format={(v) => formatCurrency(v, 'en-IN')}
+                                />
+                            )}
                         </div>
 
                         {isCorpusExhausted && (
-                            <div style={{ padding: '0.75rem 1rem', borderRadius: 'var(--radius-md)', backgroundColor: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.3)', marginBottom: '1rem', color: 'var(--color-text-primary)', fontSize: '0.875rem' }}>
+                            <div style={{ padding: '0.75rem 1rem', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--color-danger)', border: 'var(--border-width) solid var(--color-border)', boxShadow: 'var(--shadow-brutal-sm)', marginBottom: '1rem', color: '#ffffff', fontSize: '0.875rem' }}>
                                 ⚠️ Corpus gets exhausted after <strong>Year {exhaustedYear}</strong>. Consider reducing monthly withdrawals or increasing your corpus.
                             </div>
                         )}
@@ -128,11 +151,20 @@ export function SWPCalculator() {
                         <div className={styles.twoCol} style={{ marginTop: '1rem' }}>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                                 <span className={styles.resultLabel}>Total Withdrawn</span>
-                                <span className={styles.resultValue}>{formatCurrency(result.totalWithdrawn, 'en-IN')}</span>
+                                <AnimatedNumber
+                                    className={styles.resultValue}
+                                    value={result.totalWithdrawn}
+                                    format={(v) => formatCurrency(v, 'en-IN')}
+                                />
                             </div>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', alignItems: 'flex-end' }}>
                                 <span className={styles.resultLabel}>Total Returns Earned</span>
-                                <span className={styles.resultValue} style={{ color: 'var(--color-success)' }}>+{formatCurrency(result.totalReturns, 'en-IN')}</span>
+                                <AnimatedNumber
+                                    className={styles.resultValue}
+                                    style={{ color: 'var(--color-success)' }}
+                                    value={result.totalReturns}
+                                    format={(v) => `+${formatCurrency(v, 'en-IN')}`}
+                                />
                             </div>
                         </div>
 
@@ -141,6 +173,19 @@ export function SWPCalculator() {
                             <span className={styles.resultValue}>
                                 {Math.floor(result.monthsLasted / 12)} Yrs {result.monthsLasted % 12} Mos
                             </span>
+                        </div>
+
+                        <div className={styles.donutSection}>
+                            <BreakdownDonut
+                                segments={[
+                                    { name: 'Withdrawn', value: result.totalWithdrawn, color: 'var(--color-warning)' },
+                                    { name: 'Remaining Corpus', value: result.finalCorpus, color: 'var(--color-primary-500)' },
+                                ]}
+                                centerLabel="Total Available"
+                                centerValue={formatYAxis(corpus + result.totalReturns)}
+                                formatValue={(v) => formatCurrency(v, 'en-IN')}
+                                height={180}
+                            />
                         </div>
 
                         <div style={{ height: '250px', width: '100%', marginTop: '2rem', marginBottom: '1rem' }}>

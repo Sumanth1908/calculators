@@ -2,14 +2,25 @@ import { useState } from 'react';
 import { Calculator, Moon, Sun, Menu, X, RefreshCw } from 'lucide-react';
 import styles from './Shell.module.css';
 
+export interface NavItem {
+    id: string;
+    title: string;
+    icon: React.ReactNode;
+}
+
+export interface NavSection {
+    label?: string;
+    items: NavItem[];
+}
+
 interface ShellProps {
     children: React.ReactNode;
-    navItems: { id: string; title: string; icon: React.ReactNode }[];
+    navSections: NavSection[];
     activeTab: string;
     onTabChange: (id: string) => void;
 }
 
-export function Shell({ children, navItems, activeTab, onTabChange }: ShellProps) {
+export function Shell({ children, navSections, activeTab, onTabChange }: ShellProps) {
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [isDarkMode, setIsDarkMode] = useState(() => {
         // Check initial preference
@@ -31,6 +42,11 @@ export function Shell({ children, navItems, activeTab, onTabChange }: ShellProps
         window.location.reload();
     };
 
+    const goHome = () => {
+        onTabChange('home');
+        setIsSidebarOpen(false);
+    };
+
     return (
         <div className={styles.shell}>
             {/* Mobile Header */}
@@ -42,7 +58,7 @@ export function Shell({ children, navItems, activeTab, onTabChange }: ShellProps
                 >
                     <Menu size={24} />
                 </button>
-                <h1 className={styles.mobileTitle}>FinCalc</h1>
+                <button className={styles.mobileTitle} onClick={goHome}>FinCalc</button>
                 <button
                     className={styles.iconButton}
                     onClick={toggleTheme}
@@ -63,10 +79,10 @@ export function Shell({ children, navItems, activeTab, onTabChange }: ShellProps
             {/* Sidebar */}
             <aside className={`${styles.sidebar} ${isSidebarOpen ? styles.sidebarOpen : ''}`}>
                 <div className={styles.sidebarHeader}>
-                    <div className={styles.brand}>
+                    <button className={styles.brand} onClick={goHome} aria-label="Go to home">
                         <Calculator className={styles.brandIcon} size={28} />
                         <h2>FinCalc</h2>
-                    </div>
+                    </button>
                     <button
                         className={styles.closeButton}
                         onClick={() => setIsSidebarOpen(false)}
@@ -76,18 +92,25 @@ export function Shell({ children, navItems, activeTab, onTabChange }: ShellProps
                 </div>
 
                 <nav className={styles.nav}>
-                    {navItems.map((item) => (
-                        <button
-                            key={item.id}
-                            onClick={() => {
-                                onTabChange(item.id);
-                                setIsSidebarOpen(false);
-                            }}
-                            className={`${styles.navItem} ${activeTab === item.id ? styles.navItemActive : ''}`}
-                        >
-                            {item.icon}
-                            <span>{item.title}</span>
-                        </button>
+                    {navSections.map((section, i) => (
+                        <div key={section.label ?? i} className={styles.navSection}>
+                            {section.label && (
+                                <span className={styles.navSectionLabel}>{section.label}</span>
+                            )}
+                            {section.items.map((item) => (
+                                <button
+                                    key={item.id}
+                                    onClick={() => {
+                                        onTabChange(item.id);
+                                        setIsSidebarOpen(false);
+                                    }}
+                                    className={`${styles.navItem} ${activeTab === item.id ? styles.navItemActive : ''}`}
+                                >
+                                    {item.icon}
+                                    <span>{item.title}</span>
+                                </button>
+                            ))}
+                        </div>
                     ))}
                 </nav>
 

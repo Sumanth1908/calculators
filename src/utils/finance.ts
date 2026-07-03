@@ -18,8 +18,12 @@ import type {
     PPFScheduleRow,
     RDResult,
     RDScheduleRow,
-    GoalResult
+    GoalResult,
+    JourneyInputs,
+    JourneyPoint,
+    JourneyResult
 } from '../types/finance.types';
+import { simulate } from '../core/engine';
 
 export type {
     EMIDetails,
@@ -41,7 +45,10 @@ export type {
     PPFScheduleRow,
     RDResult,
     RDScheduleRow,
-    GoalResult
+    GoalResult,
+    JourneyInputs,
+    JourneyPoint,
+    JourneyResult
 };
 
 /**
@@ -242,6 +249,17 @@ export function calculatePrepaymentImpact(
     };
 }
 
+/** Compact Indian-style money formatting: ₹1.2Cr, ₹45.0L, ₹30K */
+export function formatCompactINR(value: number): string {
+    if (!isFinite(value)) return '∞';
+    const sign = value < 0 ? '-' : '';
+    const abs = Math.abs(value);
+    if (abs >= 10000000) return `${sign}₹${(abs / 10000000).toFixed(2)}Cr`;
+    if (abs >= 100000) return `${sign}₹${(abs / 100000).toFixed(1)}L`;
+    if (abs >= 1000) return `${sign}₹${(abs / 1000).toFixed(0)}K`;
+    return `${sign}₹${Math.round(abs).toLocaleString('en-IN')}`;
+}
+
 export function formatCurrency(amount: number, locale = 'en-US', currency = 'USD'): string {
     if (isNaN(amount)) return '0';
     return new Intl.NumberFormat(locale, {
@@ -361,8 +379,10 @@ export function calculateSIPSchedule(
         if (month > 1 && (month - 1) % 12 === 0 && annualStepUpPercent > 0) {
             currentSIP = currentSIP * (1 + annualStepUpPercent / 100);
         }
-        const returnThisMonth = corpus * monthlyRate;
-        corpus = corpus + returnThisMonth + currentSIP;
+        // Annuity-due: the instalment is invested at the start of the month,
+        // so it earns that month's growth (matches calculateSIP's summary).
+        const returnThisMonth = (corpus + currentSIP) * monthlyRate;
+        corpus = corpus + currentSIP + returnThisMonth;
         totalInvested += currentSIP;
 
         schedule.push({
@@ -610,14 +630,15 @@ export function calculateGoalSavings(
     const monthlyRate = annualReturn / 12 / 100;
     const totalMonths = years * 12;
 
-    // PMT formula: SIP needed to reach a future value
+    // Annuity-due PMT: SIP needed to reach a future value, with each
+    // instalment invested at the start of the month (matches calculateSIP)
     let monthlyInvestmentRequired = 0;
     if (monthlyRate === 0) {
         monthlyInvestmentRequired = adjustedTarget / totalMonths;
     } else {
         monthlyInvestmentRequired =
             (adjustedTarget * monthlyRate) /
-            (Math.pow(1 + monthlyRate, totalMonths) - 1);
+            ((Math.pow(1 + monthlyRate, totalMonths) - 1) * (1 + monthlyRate));
     }
 
     const totalInvested = monthlyInvestmentRequired * totalMonths;
@@ -736,6 +757,121 @@ export function calculateRD(
  * Generates a month-by-month RD schedule.
  * Each month a new instalment is deposited and all previous instalments earn interest.
  */
+// ─────────────────────────────────────────────────────────────────────────────
+// Wealth Journey — accumulation (SIP) chained into retirement drawdown (SWP)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Simulates an entire financial life month by month on the cash-flow engine:
+ * from `currentAge` to `retirementAge` a monthly SIP (with annual step-up)
+ * compounds at the pre-retirement return; from retirement to `lifeExpectancy`
+ * inflation-adjusted expenses are withdrawn while the remaining corpus
+ * compounds at the post-retirement return.
+ */
+export function calculateJourney(inputs: JourneyInputs): JourneyResult {
+    const {
+        currentAge,
+        retirementAge,
+        lifeExpectancy,
+        monthlyInvestment,
+        stepUpPercent,
+        preRetirementReturn,
+        postRetirementReturn,
+        monthlyExpenseToday,
+        inflation,
+    } = inputs;
+
+    const empty: JourneyResult = {
+        corpusAtRetirement: 0,
+        totalInvested: 0,
+        monthlyExpenseAtRetirement: monthlyExpenseToday,
+        depletionAge: null,
+        legacyAmount: 0,
+        points: [],
+    };
+
+    if (retirementAge <= currentAge || lifeExpectancy <= retirementAge || monthlyInvestment <= 0) {
+        return empty;
+    }
+
+    const growMonths = (retirementAge - currentAge) * 12;
+    const totalMonths = (lifeExpectancy - currentAge) * 12;
+    const monthlyExpenseAtRetirement =
+        monthlyExpenseToday * Math.pow(1 + inflation / 12 / 100, growMonths);
+
+    const sim = simulate({
+        months: totalMonths,
+        accounts: [
+            {
+                id: 'wealth',
+                initial: 0,
+                rates: [
+                    { untilMonth: growMonths, annualRatePct: preRetirementReturn },
+                    { untilMonth: totalMonths, annualRatePct: postRetirementReturn },
+                ],
+            },
+        ],
+        flows: [
+            {
+                id: 'sip',
+                to: 'wealth',
+                amount: monthlyInvestment,
+                startMonth: 1,
+                endMonth: growMonths,
+                annualStepUpPct: stepUpPercent,
+                timing: 'start',
+            },
+            {
+                id: 'expenses',
+                from: 'wealth',
+                amount: monthlyExpenseAtRetirement,
+                startMonth: growMonths + 1,
+                endMonth: totalMonths,
+                monthlyGrowthPct: inflation / 12,
+                capToBalance: true,
+            },
+        ],
+    });
+
+    const corpusAtRetirement = sim.months[growMonths - 1].balances.wealth;
+
+    // First retirement month whose withdrawal couldn't be met in full
+    let depletionAge: number | null = null;
+    for (let m = growMonths + 1; m <= totalMonths; m++) {
+        if (sim.months[m - 1].balances.wealth <= 0.005) {
+            depletionAge = currentAge + m / 12;
+            break;
+        }
+    }
+
+    const points: JourneyPoint[] = [
+        { age: currentAge, growCorpus: 0, spendCorpus: null, invested: 0 },
+    ];
+    let invested = 0;
+    for (let m = 1; m <= totalMonths; m++) {
+        const state = sim.months[m - 1];
+        invested += state.flows.sip;
+        if (m % 12 !== 0) continue;
+        const isGrowPhase = m <= growMonths;
+        points.push({
+            age: currentAge + m / 12,
+            growCorpus: isGrowPhase ? state.balances.wealth : null,
+            // The retirement-age point carries both series so the chart areas connect
+            spendCorpus: !isGrowPhase || m === growMonths ? state.balances.wealth : null,
+            invested,
+        });
+    }
+
+    return {
+        corpusAtRetirement,
+        totalInvested: sim.deposited.wealth,
+        monthlyExpenseAtRetirement,
+        depletionAge,
+        legacyAmount: depletionAge === null ? sim.final.wealth : 0,
+        points,
+    };
+}
+
 export function calculateRDSchedule(
     monthly: number,
     annualRate: number,

@@ -2,10 +2,13 @@ import { useState, useMemo } from 'react';
 import { Card, CardContent, CardTitle, CardHeader } from '../ui/Card';
 import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
-import { calculateEMI, formatCurrency, calculateAmortizationSchedule, calculatePrepaymentImpact, calculateTenureFromEMI } from '../../utils/finance';
+import { AnimatedNumber } from '../ui/AnimatedNumber';
+import { BreakdownDonut } from '../ui/BreakdownDonut';
+import { ScenarioActions } from '../ui/ScenarioActions';
+import { calculateEMI, formatCurrency, formatCompactINR, calculateAmortizationSchedule, calculatePrepaymentImpact, calculateTenureFromEMI } from '../../utils/finance';
 import type { PrepaymentResult, AmortizationScheduleRow, PrepaymentFrequency, PrepaymentReductionMode, TenureUnit, CalcMode } from '../../types/finance.types';
 import { useLocalStorage } from '../../hooks/useLocalStorage';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { LineChart, Line, BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Calculator, Clock3, WalletCards } from 'lucide-react';
 import styles from './EMI.module.css';
 
@@ -37,18 +40,20 @@ export function EMICalculator() {
             return { emi: activeEmi || 0, totalInterest: activeTenure === Infinity ? Infinity : 0, totalPayment: activeTenure === Infinity ? Infinity : 0 };
         }
 
-        return calcMode === 'emi'
-            ? calculateEMI(principal, rate, tenureInYears)
-            : (function () {
-                const computedTenure = calculateTenureFromEMI(principal, rate, customEmi);
-                if (computedTenure === Infinity) return { emi: customEmi, totalPayment: Infinity, totalInterest: Infinity };
-                const payment = customEmi * computedTenure * 12;
-                return { emi: customEmi, totalPayment: payment, totalInterest: payment - principal };
-            })();
-    }, [activeEmi, activeTenure, calcMode, customEmi, principal, rate, tenureInYears]);
+        if (calcMode === 'emi') {
+            return calculateEMI(principal, rate, tenureInYears);
+        }
+
+        const computedTenure = calculateTenureFromEMI(principal, rate, customEmi);
+        if (computedTenure === Infinity) return { emi: customEmi, totalPayment: Infinity, totalInterest: Infinity };
+        const payment = customEmi * computedTenure * 12;
+        return { emi: customEmi, totalPayment: payment, totalInterest: payment - principal };
+    }, [activeTenure, activeEmi, calcMode, principal, rate, tenureInYears, customEmi]);
 
     const prepaymentResult = useMemo<PrepaymentResult | null>(() => {
-        if (!activeTenure || activeTenure === Infinity || prepaymentAmount <= 0) return null;
+        if (!activeTenure || activeTenure === Infinity || prepaymentAmount <= 0) {
+            return null;
+        }
 
         const monthlyPrepaymentForImpact = prepaymentFrequency !== 'one-time' ? prepaymentAmount : 0;
         const lumpSumForImpact = prepaymentFrequency === 'one-time' ? prepaymentAmount : 0;
@@ -335,12 +340,44 @@ export function EMICalculator() {
                 {/* Results Section */}
                 <Card className={styles.resultCard}>
                     <CardHeader>
-                        <CardTitle>EMI Details & Visualization</CardTitle>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', flexWrap: 'wrap' }}>
+                            <CardTitle>EMI Details & Visualization</CardTitle>
+                            <ScenarioActions
+                                studio="emi"
+                                studioTitle="Loan EMI"
+                                title={`${formatCompactINR(principal)} · ${rate}% · ${activeTenure === Infinity ? '∞' : `${Math.round(activeTenure * 12)}mo`}${prepaymentAmount > 0 ? ' · prepay' : ''}`}
+                                inputs={{
+                                    emi_principal: principal,
+                                    emi_rate: rate,
+                                    emi_tenure: tenure,
+                                    emi_tenure_unit: tenureUnit,
+                                    emi_calc_mode: calcMode,
+                                    emi_custom_val: customEmi,
+                                    emi_start_date: startDate,
+                                    pre_amount: prepaymentAmount,
+                                    pre_frequency: prepaymentFrequency,
+                                    pre_lumpsum_month: lumpSumMonth,
+                                }}
+                                metrics={[
+                                    { label: 'Monthly EMI', display: formatCurrency(emiDetails.emi, 'en-IN'), value: emiDetails.emi, kind: 'currency' },
+                                    { label: 'Total interest', display: activeTenure === Infinity ? '∞' : formatCurrency(emiDetails.totalInterest, 'en-IN'), value: activeTenure === Infinity ? undefined : emiDetails.totalInterest, kind: 'currency' },
+                                    { label: 'Total payable', display: activeTenure === Infinity ? '∞' : formatCurrency(emiDetails.totalPayment, 'en-IN'), value: activeTenure === Infinity ? undefined : emiDetails.totalPayment, kind: 'currency' },
+                                    { label: 'Tenure (months)', display: activeTenure === Infinity ? '∞' : `${Math.round(activeTenure * 12)}`, value: activeTenure === Infinity ? undefined : Math.round(activeTenure * 12), kind: 'number' },
+                                    ...(prepaymentResult
+                                        ? [{ label: 'Interest saved', display: formatCurrency(prepaymentResult.interestSaved, 'en-IN'), value: prepaymentResult.interestSaved, kind: 'currency' as const }]
+                                        : []),
+                                ]}
+                            />
+                        </div>
                     </CardHeader>
                     <CardContent>
                         <div className={styles.resultItem}>
                             <span className={styles.resultLabel}>Monthly EMI</span>
-                            <span className={styles.highlight}>{formatCurrency(emiDetails.emi, 'en-IN')}</span>
+                            <AnimatedNumber
+                                className={styles.highlight}
+                                value={emiDetails.emi}
+                                format={(v) => formatCurrency(v, 'en-IN')}
+                            />
                         </div>
 
                         <hr className={styles.divider} />
@@ -348,11 +385,25 @@ export function EMICalculator() {
                         <div className={styles.twoCol} style={{ marginTop: '1rem' }}>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                                 <span className={styles.resultLabel}>Principal Amount</span>
-                                <span className={styles.resultValue} style={{ fontSize: '1.125rem' }}>{formatCurrency(principal, 'en-IN')}</span>
+                                <AnimatedNumber
+                                    className={styles.resultValue}
+                                    style={{ fontSize: '1.125rem' }}
+                                    value={principal}
+                                    format={(v) => formatCurrency(v, 'en-IN')}
+                                />
                             </div>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', alignItems: 'flex-end' }}>
                                 <span className={styles.resultLabel}>Total Interest</span>
-                                <span className={styles.resultValue} style={{ fontSize: '1.125rem' }}>{activeTenure === Infinity ? '∞' : formatCurrency(emiDetails.totalInterest, 'en-IN')}</span>
+                                {activeTenure === Infinity ? (
+                                    <span className={styles.resultValue} style={{ fontSize: '1.125rem' }}>∞</span>
+                                ) : (
+                                    <AnimatedNumber
+                                        className={styles.resultValue}
+                                        style={{ fontSize: '1.125rem' }}
+                                        value={emiDetails.totalInterest}
+                                        format={(v) => formatCurrency(v, 'en-IN')}
+                                    />
+                                )}
                             </div>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                                 <span className={styles.resultLabel}>Loan Tenure</span>
@@ -362,19 +413,37 @@ export function EMICalculator() {
 
                         <div className={styles.resultItemTotal}>
                             <span className={styles.resultLabel}>{prepaymentResult ? 'Revised Total Payable' : 'Total Amount Payable'}</span>
-                            <span className={styles.resultValue}>{displayedTotalPayment === Infinity ? '∞' : formatCurrency(displayedTotalPayment, 'en-IN')}</span>
+                            {displayedTotalPayment === Infinity ? (
+                                <span className={styles.resultValue}>∞</span>
+                            ) : (
+                                <AnimatedNumber
+                                    className={styles.resultValue}
+                                    value={displayedTotalPayment}
+                                    format={(v) => formatCurrency(v, 'en-IN')}
+                                />
+                            )}
                         </div>
 
+                        {activeTenure !== Infinity && principal > 0 && emiDetails.totalInterest > 0 && (
+                            <div className={styles.insightChip}>
+                                💸 You pay <strong>{((emiDetails.totalInterest / principal) * 100).toFixed(0)}%</strong> of the
+                                loan amount as interest — every extra rupee prepaid saves more.
+                            </div>
+                        )}
+
                         {prepaymentResult && (
-                            <div style={{ marginTop: '1.5rem', padding: '1rem', backgroundColor: 'var(--color-bg-subtle)', borderRadius: 'var(--radius-lg)' }}>
+                            <div style={{ marginTop: '1.5rem', padding: '1rem', backgroundColor: 'var(--color-bg-subtle)', borderRadius: 'var(--radius-lg)', border: 'var(--border-width) solid var(--color-border)' }}>
                                 <h4 style={{ marginBottom: '1rem', fontWeight: 600, color: 'var(--color-success)' }}>
                                     Prepayment Savings
                                 </h4>
                                 <div className={styles.resultItem}>
                                     <span className={styles.resultLabel}>Interest Saved</span>
-                                    <span className={styles.resultValue} style={{ color: 'var(--color-success)', fontWeight: 700 }}>
-                                        {formatCurrency(prepaymentResult.interestSaved, 'en-IN')}
-                                    </span>
+                                    <AnimatedNumber
+                                        className={styles.resultValue}
+                                        style={{ color: 'var(--color-success)', fontWeight: 700 }}
+                                        value={prepaymentResult.interestSaved}
+                                        format={(v) => formatCurrency(v, 'en-IN')}
+                                    />
                                 </div>
                                 {prepaymentReductionMode === 'tenure' ? (
                                     <div className={styles.resultItem}>
@@ -402,6 +471,51 @@ export function EMICalculator() {
                                             : formatCurrency(prepaymentResult.emiReduced, 'en-IN')}
                                     </span>
                                 </div>
+
+                                <div style={{ height: '130px', width: '100%', marginTop: '1.25rem' }}>
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <BarChart
+                                            data={[
+                                                { name: 'Without Prepayment', interest: prepaymentResult.originalTotalInterest },
+                                                { name: 'With Prepayment', interest: prepaymentResult.newTotalInterest },
+                                            ]}
+                                            layout="vertical"
+                                            margin={{ top: 0, right: 20, left: 10, bottom: 0 }}
+                                        >
+                                            <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="var(--color-border-subtle)" />
+                                            <XAxis type="number" tickFormatter={formatCompactINR} tick={{ fill: 'var(--color-text-secondary)', fontSize: 11 }} />
+                                            <YAxis type="category" dataKey="name" width={120} tick={{ fill: 'var(--color-text-primary)', fontSize: 12, fontWeight: 600 }} />
+                                            <Tooltip
+                                                formatter={(value: number | undefined) => formatCurrency(value || 0, 'en-IN')}
+                                                contentStyle={{ backgroundColor: 'var(--color-bg-surface)', border: 'var(--border-width) solid var(--color-border)', borderRadius: 'var(--radius-md)', color: 'var(--color-text-primary)' }}
+                                                cursor={{ fill: 'var(--color-bg-subtle)' }}
+                                            />
+                                            <Bar dataKey="interest" name="Total Interest" radius={[0, 4, 4, 0]}>
+                                                <Cell fill="var(--color-warning)" />
+                                                <Cell fill="var(--color-success)" />
+                                            </Bar>
+                                        </BarChart>
+                                    </ResponsiveContainer>
+                                </div>
+                            </div>
+                        )}
+
+                        {activeTenure !== Infinity && (
+                            <div className={styles.donutSection}>
+                                <BreakdownDonut
+                                    segments={[
+                                        { name: 'Principal', value: principal, color: 'var(--color-primary-500)' },
+                                        { name: 'Interest', value: displayedTotalPayment - principal, color: 'var(--color-warning)' },
+                                    ]}
+                                    centerLabel={prepaymentResult ? 'Revised Payable' : 'Total Payable'}
+                                    centerValue={
+                                        displayedTotalPayment >= 10000000
+                                            ? `₹${(displayedTotalPayment / 10000000).toFixed(2)}Cr`
+                                            : `₹${(displayedTotalPayment / 100000).toFixed(1)}L`
+                                    }
+                                    formatValue={(v) => formatCurrency(v, 'en-IN')}
+                                    height={190}
+                                />
                             </div>
                         )}
 

@@ -11,15 +11,31 @@
     padding: 0;
 }
 
+html {
+    background-color: var(--color-bg-body);
+    transition: background-color var(--transition-normal);
+}
+
 body {
     font-family: var(--font-family-base);
-    background-color: var(--color-bg-body);
+    background-color: transparent;
     color: var(--color-text-primary);
     line-height: 1.5;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    transition: background-color var(--transition-normal), color var(--transition-normal);
+    transition: color var(--transition-normal);
     min-height: 100vh;
+}
+
+/* Flat dot-grid backdrop — blueprint texture instead of soft gradients */
+body {
+    background-image: radial-gradient(var(--color-border-subtle) 1.5px, transparent 1.5px);
+    background-size: 26px 26px;
+}
+
+[data-theme='dark'] body {
+    background-image: radial-gradient(var(--color-border-subtle) 1.5px, transparent 1.5px);
+    background-size: 26px 26px;
 }
 
 input,
@@ -56,9 +72,10 @@ button {
 h1,
 h2,
 h3 {
+    font-family: var(--font-family-display);
     color: var(--color-text-primary);
     font-weight: 700;
-    letter-spacing: -0.025em;
+    letter-spacing: -0.02em;
 }
 
 p {
@@ -94,8 +111,33 @@ p {
     50% { opacity: 0.7; }
 }
 
+@keyframes popIn {
+    0% {
+        transform: scale(0.85);
+        opacity: 0.6;
+    }
+    60% {
+        transform: scale(1.06);
+    }
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
 .animate-fade-in {
     animation: fadeIn var(--transition-normal) both;
+}
+
+/* Respect users who prefer less motion */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
 }
 
 /* Hide number input arrows globally for cleaner look */

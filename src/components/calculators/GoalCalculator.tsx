@@ -3,7 +3,10 @@ import { Card, CardContent, CardTitle, CardHeader } from '../ui/Card';
 import { Input } from '../ui/Input';
 import { SliderInput } from '../ui/SliderInput';
 import { Button } from '../ui/Button';
-import { calculateGoalSavings, calculateSIPSchedule, formatCurrency } from '../../utils/finance';
+import { AnimatedNumber } from '../ui/AnimatedNumber';
+import { BreakdownDonut } from '../ui/BreakdownDonut';
+import { ScenarioActions } from '../ui/ScenarioActions';
+import { calculateGoalSavings, calculateSIPSchedule, formatCurrency, formatCompactINR } from '../../utils/finance';
 import { useLocalStorage } from '../../hooks/useLocalStorage';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import styles from './EMI.module.css';
@@ -71,13 +74,15 @@ export function GoalCalculator() {
                             style={{
                                 padding: '0.375rem 0.75rem',
                                 borderRadius: 'var(--radius-full, 9999px)',
-                                border: '1px solid var(--color-border)',
-                                backgroundColor: target === g.amount && years === g.years ? 'var(--color-primary-600)' : 'var(--color-bg-surface)',
+                                border: 'var(--border-width) solid var(--color-border)',
+                                backgroundColor: target === g.amount && years === g.years ? 'var(--color-primary-500)' : 'var(--color-bg-surface)',
                                 color: target === g.amount && years === g.years ? 'white' : 'var(--color-text-primary)',
+                                boxShadow: target === g.amount && years === g.years ? 'var(--shadow-brutal-sm)' : 'none',
                                 fontSize: '0.8125rem',
-                                fontWeight: 500,
+                                fontWeight: 700,
+                                fontFamily: 'var(--font-family-display)',
                                 cursor: 'pointer',
-                                transition: 'all 0.2s'
+                                transition: 'all 0.15s'
                             }}
                         >
                             {g.label}
@@ -138,7 +143,7 @@ export function GoalCalculator() {
                                 formatTick={(v) => `${v}%`}
                             />
                             {inflation > 0 && (
-                                <div style={{ padding: '0.75rem', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--color-bg-subtle)', color: 'var(--color-text-secondary)', fontSize: '0.875rem' }}>
+                                <div style={{ padding: '0.75rem', borderRadius: 'var(--radius-md)', border: 'var(--border-width) solid var(--color-border)', backgroundColor: 'var(--color-bg-subtle)', color: 'var(--color-text-secondary)', fontSize: '0.875rem' }}>
                                     📈 Inflation-adjusted target: <strong>{formatCurrency(result.targetAmount, 'en-IN')}</strong> (from ₹{(target / 100000).toFixed(1)}L today to {(result.targetAmount / 100000).toFixed(1)}L in {years} years)
                                 </div>
                             )}
@@ -151,30 +156,88 @@ export function GoalCalculator() {
 
                 <Card className={styles.resultCard}>
                     <CardHeader>
-                        <CardTitle>Your Goal: {goalName}</CardTitle>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', flexWrap: 'wrap' }}>
+                            <CardTitle>Your Goal: {goalName}</CardTitle>
+                            <ScenarioActions
+                                studio="goal"
+                                studioTitle="Goal Planner"
+                                title={`${goalName} · ${formatCompactINR(target)} · ${years}y`}
+                                inputs={{
+                                    goal_target: target,
+                                    goal_rate: rate,
+                                    goal_years: years,
+                                    goal_inflation: inflation,
+                                    goal_name: goalName,
+                                }}
+                                metrics={[
+                                    { label: 'Monthly SIP required', display: formatCurrency(result.monthlyInvestmentRequired, 'en-IN'), value: result.monthlyInvestmentRequired, kind: 'currency' },
+                                    { label: "You'll invest", display: formatCurrency(result.totalInvested, 'en-IN'), value: result.totalInvested, kind: 'currency' },
+                                    { label: 'Returns contribution', display: formatCurrency(result.totalReturns, 'en-IN'), value: result.totalReturns, kind: 'currency' },
+                                    { label: 'Final corpus', display: formatCurrency(result.targetAmount, 'en-IN'), value: result.targetAmount, kind: 'currency' },
+                                ]}
+                            />
+                        </div>
                     </CardHeader>
                     <CardContent>
                         <div className={styles.resultItem}>
                             <span className={styles.resultLabel}>Monthly SIP Required</span>
-                            <span className={styles.highlight}>{formatCurrency(result.monthlyInvestmentRequired, 'en-IN')}</span>
+                            <AnimatedNumber
+                                className={styles.highlight}
+                                value={result.monthlyInvestmentRequired}
+                                format={(v) => formatCurrency(v, 'en-IN')}
+                            />
                         </div>
+
+                        {result.monthlyInvestmentRequired > 0 && (
+                            <div className={styles.insightChip}>
+                                ☕ That's about <strong>{formatCurrency(result.monthlyInvestmentRequired / 30, 'en-IN')}</strong> a
+                                day to reach {goalName} — returns do{' '}
+                                <strong>{result.targetAmount > 0 ? ((result.totalReturns / result.targetAmount) * 100).toFixed(0) : 0}%</strong> of the heavy lifting.
+                            </div>
+                        )}
 
                         <hr className={styles.divider} />
 
                         <div className={styles.twoCol} style={{ marginTop: '1rem' }}>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                                 <span className={styles.resultLabel}>Total You'll Invest</span>
-                                <span className={styles.resultValue}>{formatCurrency(result.totalInvested, 'en-IN')}</span>
+                                <AnimatedNumber
+                                    className={styles.resultValue}
+                                    value={result.totalInvested}
+                                    format={(v) => formatCurrency(v, 'en-IN')}
+                                />
                             </div>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', alignItems: 'flex-end' }}>
                                 <span className={styles.resultLabel}>Returns Contribution</span>
-                                <span className={styles.resultValue} style={{ color: 'var(--color-success)' }}>+{formatCurrency(result.totalReturns, 'en-IN')}</span>
+                                <AnimatedNumber
+                                    className={styles.resultValue}
+                                    style={{ color: 'var(--color-success)' }}
+                                    value={result.totalReturns}
+                                    format={(v) => `+${formatCurrency(v, 'en-IN')}`}
+                                />
                             </div>
                         </div>
 
                         <div className={styles.resultItemTotal}>
                             <span className={styles.resultLabel}>Final Corpus at Goal</span>
-                            <span className={styles.resultValue}>{formatCurrency(result.targetAmount, 'en-IN')}</span>
+                            <AnimatedNumber
+                                className={styles.resultValue}
+                                value={result.targetAmount}
+                                format={(v) => formatCurrency(v, 'en-IN')}
+                            />
+                        </div>
+
+                        <div className={styles.donutSection}>
+                            <BreakdownDonut
+                                segments={[
+                                    { name: 'You Invest', value: result.totalInvested, color: 'var(--color-primary-500)' },
+                                    { name: 'Returns', value: result.totalReturns, color: 'var(--color-success)' },
+                                ]}
+                                centerLabel="Goal Corpus"
+                                centerValue={formatYAxis(result.targetAmount)}
+                                formatValue={(v) => formatCurrency(v, 'en-IN')}
+                                height={180}
+                            />
                         </div>
 
                         <div style={{ height: '250px', width: '100%', marginTop: '2rem', marginBottom: '1rem' }}>

@@ -2,7 +2,10 @@ import { useState, useMemo } from 'react';
 import { Card, CardContent, CardTitle, CardHeader } from '../ui/Card';
 import { SliderInput } from '../ui/SliderInput';
 import { Button } from '../ui/Button';
-import { calculateSIP, calculateSIPSchedule, formatCurrency } from '../../utils/finance';
+import { AnimatedNumber } from '../ui/AnimatedNumber';
+import { BreakdownDonut } from '../ui/BreakdownDonut';
+import { ScenarioActions } from '../ui/ScenarioActions';
+import { calculateSIP, calculateSIPSchedule, formatCurrency, formatCompactINR } from '../../utils/finance';
 import type { SIPScheduleRow } from '../../types/finance.types';
 import { useLocalStorage } from '../../hooks/useLocalStorage';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
@@ -35,6 +38,12 @@ export function SIPCalculator() {
         }
         return yearlyData;
     }, [schedule, years]);
+
+    // First year where returns exceed the amount invested so far
+    const crossoverYear = useMemo(() => {
+        const idx = chartData.findIndex((d) => d.gains > d.invested);
+        return idx >= 0 ? idx + 1 : null;
+    }, [chartData]);
 
     const handleReset = () => {
         setMonthly(10000);
@@ -98,7 +107,7 @@ export function SIPCalculator() {
                                 formatTick={(v) => `${v}%`}
                             />
                             {stepUp > 0 && (
-                                <div style={{ padding: '0.75rem', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--color-bg-subtle)', color: 'var(--color-text-secondary)', fontSize: '0.875rem' }}>
+                                <div style={{ padding: '0.75rem', borderRadius: 'var(--radius-md)', border: 'var(--border-width) solid var(--color-border)', backgroundColor: 'var(--color-bg-subtle)', color: 'var(--color-text-secondary)', fontSize: '0.875rem' }}>
                                     💡 Your SIP will increase by <strong>{stepUp}%</strong> every year — a Step-Up SIP that significantly boosts your wealth.
                                 </div>
                             )}
@@ -111,12 +120,30 @@ export function SIPCalculator() {
 
                 <Card className={styles.resultCard}>
                     <CardHeader>
-                        <CardTitle>Wealth Projection</CardTitle>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', flexWrap: 'wrap' }}>
+                            <CardTitle>Wealth Projection</CardTitle>
+                            <ScenarioActions
+                                studio="sip"
+                                studioTitle="SIP / Mutual Funds"
+                                title={`${formatCompactINR(monthly)}/mo · ${rate}% · ${years}y${stepUp > 0 ? ` · +${stepUp}%/yr` : ''}`}
+                                inputs={{ sip_monthly: monthly, sip_rate: rate, sip_years: years, sip_stepup: stepUp }}
+                                metrics={[
+                                    { label: 'Total corpus', display: formatCurrency(result.totalValue, 'en-IN'), value: result.totalValue, kind: 'currency' },
+                                    { label: 'Total invested', display: formatCurrency(result.investedAmount, 'en-IN'), value: result.investedAmount, kind: 'currency' },
+                                    { label: 'Estimated returns', display: formatCurrency(result.estimatedReturns, 'en-IN'), value: result.estimatedReturns, kind: 'currency' },
+                                    { label: 'Wealth gained', display: result.investedAmount > 0 ? `${((result.estimatedReturns / result.investedAmount) * 100).toFixed(1)}%` : '0%', value: result.investedAmount > 0 ? (result.estimatedReturns / result.investedAmount) * 100 : 0, kind: 'percent' },
+                                ]}
+                            />
+                        </div>
                     </CardHeader>
                     <CardContent>
                         <div className={styles.resultItem}>
                             <span className={styles.resultLabel}>Total Corpus</span>
-                            <span className={styles.highlight}>{formatCurrency(result.totalValue, 'en-IN')}</span>
+                            <AnimatedNumber
+                                className={styles.highlight}
+                                value={result.totalValue}
+                                format={(v) => formatCurrency(v, 'en-IN')}
+                            />
                         </div>
 
                         <hr className={styles.divider} />
@@ -124,19 +151,52 @@ export function SIPCalculator() {
                         <div className={styles.twoCol} style={{ marginTop: '1rem' }}>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                                 <span className={styles.resultLabel}>Total Invested</span>
-                                <span className={styles.resultValue}>{formatCurrency(result.investedAmount, 'en-IN')}</span>
+                                <AnimatedNumber
+                                    className={styles.resultValue}
+                                    value={result.investedAmount}
+                                    format={(v) => formatCurrency(v, 'en-IN')}
+                                />
                             </div>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', alignItems: 'flex-end' }}>
                                 <span className={styles.resultLabel}>Estimated Returns</span>
-                                <span className={styles.resultValue} style={{ color: 'var(--color-success)' }}>+{formatCurrency(result.estimatedReturns, 'en-IN')}</span>
+                                <AnimatedNumber
+                                    className={styles.resultValue}
+                                    style={{ color: 'var(--color-success)' }}
+                                    value={result.estimatedReturns}
+                                    format={(v) => `+${formatCurrency(v, 'en-IN')}`}
+                                />
                             </div>
                         </div>
 
                         <div className={styles.resultItemTotal}>
                             <span className={styles.resultLabel}>Wealth Gained (%)</span>
-                            <span className={styles.resultValue}>
-                                {result.investedAmount > 0 ? `${((result.estimatedReturns / result.investedAmount) * 100).toFixed(1)}%` : '0%'}
-                            </span>
+                            <AnimatedNumber
+                                className={styles.resultValue}
+                                value={result.investedAmount > 0 ? (result.estimatedReturns / result.investedAmount) * 100 : 0}
+                                format={(v) => `${v.toFixed(1)}%`}
+                            />
+                        </div>
+
+                        {result.investedAmount > 0 && (
+                            <div className={styles.insightChip}>
+                                🚀 Your money multiplies{' '}
+                                <strong>{(result.totalValue / result.investedAmount).toFixed(1)}×</strong> in {years} years
+                                {crossoverYear && (
+                                    <> — returns overtake your own contributions in <strong>year {crossoverYear}</strong></>
+                                )}
+                            </div>
+                        )}
+
+                        <div className={styles.donutSection}>
+                            <BreakdownDonut
+                                segments={[
+                                    { name: 'Invested', value: result.investedAmount, color: 'var(--color-primary-500)' },
+                                    { name: 'Returns', value: result.estimatedReturns, color: 'var(--color-success)' },
+                                ]}
+                                centerLabel="Corpus"
+                                centerValue={formatYAxis(result.totalValue)}
+                                formatValue={(v) => formatCurrency(v, 'en-IN')}
+                            />
                         </div>
 
                         <div style={{ height: '280px', width: '100%', marginTop: '2rem', marginBottom: '1rem' }}>

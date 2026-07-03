@@ -134,3 +134,36 @@ export interface GoalResult {
 }
 
 export type SIPStepUpFrequency = 'none' | 'yearly';
+
+// Wealth Journey (accumulation → retirement drawdown) Types
+export interface JourneyInputs {
+    currentAge: number;
+    retirementAge: number;
+    lifeExpectancy: number;
+    monthlyInvestment: number;
+    stepUpPercent: number;
+    preRetirementReturn: number;
+    postRetirementReturn: number;
+    monthlyExpenseToday: number;
+    inflation: number;
+}
+
+export interface JourneyPoint {
+    age: number;
+    /** Corpus during the accumulation phase (null once retired) */
+    growCorpus: number | null;
+    /** Corpus during the drawdown phase (null before retirement) */
+    spendCorpus: number | null;
+    invested: number;
+}
+
+export interface JourneyResult {
+    corpusAtRetirement: number;
+    totalInvested: number;
+    monthlyExpenseAtRetirement: number;
+    /** Age at which the corpus runs out; null if it lasts beyond life expectancy */
+    depletionAge: number | null;
+    /** Corpus left at life expectancy (0 if depleted earlier) */
+    legacyAmount: number;
+    points: JourneyPoint[];
+}

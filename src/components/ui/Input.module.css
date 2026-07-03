@@ -6,9 +6,9 @@
 
 .label {
     font-size: 0.8125rem;
-    font-weight: 600;
+    font-weight: 700;
     color: var(--color-text-secondary);
-    letter-spacing: 0.01em;
+    letter-spacing: 0.02em;
     text-transform: uppercase;
 }
 
@@ -37,13 +37,14 @@
 .input {
     width: 100%;
     padding: var(--spacing-3) var(--spacing-3);
-    border: 1.5px solid var(--color-border);
+    border: var(--border-width) solid var(--color-border);
     border-radius: var(--radius-md);
-    background-color: var(--color-bg-subtle);
+    background-color: var(--color-bg-surface);
     color: var(--color-text-primary);
+    font-family: var(--font-family-mono);
     font-size: 1rem;
-    font-weight: 500;
-    transition: border-color var(--transition-fast), box-shadow var(--transition-fast), background-color var(--transition-fast);
+    font-weight: 600;
+    transition: box-shadow var(--transition-fast), transform var(--transition-fast), background-color var(--transition-fast);
 }
 
 .input::placeholder {
@@ -52,8 +53,13 @@
 }
 
 .input:hover:not(:disabled) {
-    border-color: var(--color-text-muted);
-    background-color: var(--color-bg-surface);
+    background-color: var(--color-bg-subtle);
+}
+
+.input:disabled {
+    background-color: var(--color-bg-subtle);
+    color: var(--color-text-secondary);
+    cursor: not-allowed;
 }
 
 .input:disabled {
@@ -68,9 +74,9 @@
 
 .input:focus {
     outline: none;
-    border-color: var(--color-primary-500);
     background-color: var(--color-bg-surface);
-    box-shadow: 0 0 0 3px var(--color-focus-ring);
+    box-shadow: var(--shadow-brutal-sm);
+    transform: translate(-1.5px, -1.5px);
 }
 
 .withIcon {
@@ -82,11 +88,12 @@
 }
 
 .hasError:focus {
-    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2);
+    box-shadow: 3px 3px 0 var(--color-danger);
 }
 
 .errorText {
     font-size: 0.75rem;
+    font-weight: 600;
     color: var(--color-danger);
     margin-top: calc(var(--spacing-1) * -1);
 }

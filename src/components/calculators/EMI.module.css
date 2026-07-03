@@ -19,13 +19,8 @@
 
 .resultCard {
     flex: 1;
-    background: linear-gradient(135deg, var(--color-primary-50), var(--color-bg-surface));
-    border-color: var(--color-primary-100);
-}
-
-[data-theme='dark'] .resultCard {
-    background: linear-gradient(135deg, var(--color-bg-subtle), var(--color-bg-surface));
-    border-color: var(--color-border);
+    background-color: var(--color-bg-surface);
+    animation-delay: 80ms;
 }
 
 .inputsGrid {
@@ -49,24 +44,74 @@
 
 .resultLabel {
     color: var(--color-text-secondary);
-    font-weight: 500;
+    font-weight: 600;
 }
 
 .resultValue {
     color: var(--color-text-primary);
-    font-weight: 600;
+    font-family: var(--font-family-mono);
+    font-weight: 700;
     font-size: 1.125rem;
 }
 
 .highlight {
-    color: var(--color-primary-600);
-    font-size: 2rem;
+    font-family: var(--font-family-display);
+    font-size: 2.125rem;
     font-weight: 800;
+    letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-primary-500);
+}
+
+.highlightDanger {
+    font-family: var(--font-family-display);
+    font-size: 2.125rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    color: var(--color-danger);
+}
+
+.animatedValue {
+    font-variant-numeric: tabular-nums;
+}
+
+.insightChip {
+    display: block;
+    line-height: 1.55;
+    padding: var(--spacing-3) var(--spacing-4);
+    margin-top: var(--spacing-4);
+    border: var(--border-width) solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-accent-500);
+    color: var(--color-text-primary);
+    font-size: 0.875rem;
+    font-weight: 500;
+    box-shadow: var(--shadow-brutal-sm);
+    animation: popIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.insightChip strong {
+    font-family: var(--font-family-mono);
+    font-variant-numeric: tabular-nums;
+}
+
+.insightChipSuccess {
+    background: var(--color-success);
+    color: #ffffff;
+}
+
+.insightChipDanger {
+    background: var(--color-danger);
+    color: #ffffff;
+}
+
+.donutSection {
+    margin-top: var(--spacing-6);
 }
 
 .divider {
     border: 0;
-    height: 1px;
+    height: var(--border-width);
     background-color: var(--color-border);
     margin: var(--spacing-4) 0;
 }
@@ -86,27 +131,27 @@
     justify-content: center;
     gap: var(--spacing-2);
     padding: 0.625rem 0.75rem;
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-md);
-    background-color: var(--color-bg-subtle);
+    border: var(--border-width) solid transparent;
+    border-radius: var(--radius-sm);
+    background-color: transparent;
     color: var(--color-text-secondary);
-    font: inherit;
+    font-family: var(--font-family-display);
     font-size: 0.875rem;
     font-weight: 700;
     cursor: pointer;
-    transition: border-color var(--transition-fast), color var(--transition-fast), background-color var(--transition-fast), box-shadow var(--transition-fast), transform var(--transition-fast);
+    transition: border-color 80ms ease, color 80ms ease, background-color 80ms ease, box-shadow 80ms ease, transform 80ms ease;
 }
 
-.modeButton:hover,
-.modeButtonActive:hover {
-    transform: translateY(-1px);
+.modeButton:hover {
+    border-color: var(--color-border);
+    background-color: var(--color-bg-surface);
 }
 
 .modeButtonActive {
-    border-color: var(--color-primary-500);
-    color: var(--color-primary-700);
-    background-color: var(--color-bg-surface);
-    box-shadow: 0 0 0 3px var(--color-primary-50), var(--shadow-sm);
+    border-color: var(--color-border);
+    color: #ffffff;
+    background-color: var(--color-primary-500);
+    box-shadow: var(--shadow-brutal-sm);
 }
 
 .formStack {
@@ -117,10 +162,11 @@
 
 .unitSelect {
     padding: 0.125rem 0.25rem;
-    border: 1px solid var(--color-border);
+    border: var(--border-width) solid var(--color-border);
     border-radius: var(--radius-sm);
     background-color: var(--color-bg-surface);
     color: var(--color-text-primary);
+    font-weight: 700;
     font-size: 0.75rem;
     cursor: pointer;
     opacity: 1;
@@ -133,9 +179,9 @@
     justify-content: center;
     gap: var(--spacing-2);
     padding: var(--spacing-3);
-    border: 1px solid var(--color-primary-100);
+    border: var(--border-width) solid var(--color-border);
     border-radius: var(--radius-md);
-    background-color: var(--color-primary-50);
+    background-color: var(--color-accent-500);
 }
 
 .readoutHeader {
@@ -144,7 +190,7 @@
     align-items: center;
     justify-content: space-between;
     gap: var(--spacing-2);
-    color: var(--color-text-secondary);
+    color: var(--color-text-primary);
     font-size: 0.8125rem;
     font-weight: 700;
     letter-spacing: 0.01em;
@@ -162,10 +208,10 @@
     min-height: 1.25rem;
     align-items: center;
     padding: 0 0.375rem;
-    border: 1px solid var(--color-primary-100);
+    border: var(--border-width) solid var(--color-border);
     border-radius: var(--radius-sm);
     background-color: var(--color-bg-surface);
-    color: var(--color-primary-700);
+    color: var(--color-text-primary);
     font-size: 0.6875rem;
     font-weight: 800;
     line-height: 1;
@@ -174,6 +220,7 @@
 
 .readoutValue {
     min-width: 0;
+    font-family: var(--font-family-mono);
     color: var(--color-text-primary);
     font-size: 1.25rem;
     font-weight: 800;
@@ -183,7 +230,8 @@
 
 .sectionTitle {
     margin: 0 0 var(--spacing-3);
-    color: var(--color-primary-700);
+    color: var(--color-text-primary);
+    font-family: var(--font-family-display);
     font-size: 0.95rem;
     font-weight: 700;
 }
@@ -197,18 +245,19 @@
 .fieldLabel {
     color: var(--color-text-primary);
     font-size: 0.875rem;
-    font-weight: 500;
+    font-weight: 600;
 }
 
 .select {
     width: 100%;
     min-height: 40px;
     padding: 0.5rem 0.75rem;
-    border: 1px solid var(--color-border);
+    border: var(--border-width) solid var(--color-border);
     border-radius: var(--radius-md);
     background-color: var(--color-bg-surface);
     color: var(--color-text-primary);
     font: inherit;
+    font-weight: 600;
     font-size: 1rem;
 }
 
@@ -231,24 +280,34 @@
     align-items: center;
     gap: var(--spacing-3);
     padding: var(--spacing-3);
-    border: 1px solid var(--color-border);
+    border: var(--border-width) solid var(--color-border);
     border-radius: var(--radius-md);
     background-color: var(--color-bg-surface);
     color: var(--color-text-primary);
     text-align: left;
     cursor: pointer;
-    transition: border-color var(--transition-fast), background-color var(--transition-fast), box-shadow var(--transition-fast), transform var(--transition-fast);
+    transition: background-color 80ms ease, box-shadow 80ms ease, transform 80ms ease;
 }
 
-.strategyButton:hover,
-.strategyButtonActive:hover {
-    transform: translateY(-1px);
+.strategyButton:hover {
+    transform: translate(-2px, -2px);
+    box-shadow: var(--shadow-brutal-sm);
 }
 
 .strategyButtonActive {
-    border-color: var(--color-primary-500);
-    background-color: var(--color-primary-50);
-    box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.12);
+    background-color: var(--color-primary-500);
+    color: #ffffff;
+    box-shadow: var(--shadow-brutal-sm);
+}
+
+.strategyButtonActive:hover {
+    transform: translate(-2px, -2px);
+    box-shadow: var(--shadow-brutal-md);
+}
+
+.strategyButtonActive .strategyCopy strong,
+.strategyButtonActive .strategyCopy span {
+    color: #ffffff;
 }
 
 .strategyIcon {
@@ -259,12 +318,12 @@
     justify-content: center;
     border-radius: var(--radius-md);
     background-color: var(--color-bg-subtle);
-    color: var(--color-primary-600);
+    color: var(--color-text-primary);
 }
 
 .strategyButtonActive .strategyIcon {
-    background-color: var(--color-bg-surface);
-    color: var(--color-primary-700);
+    background-color: var(--color-accent-500);
+    color: var(--color-text-primary);
 }
 
 .strategyCopy {
@@ -297,7 +356,7 @@
     align-items: center;
     margin-top: var(--spacing-4);
     padding-top: var(--spacing-4);
-    border-top: 2px dashed var(--color-border);
+    border-top: var(--border-width) dashed var(--color-border);
 }
 
 @media (min-width: 768px) {
@@ -309,25 +368,26 @@
 
 .scheduleContainer {
     background-color: var(--color-bg-surface);
-    border: 1px solid var(--color-border);
+    border: var(--border-width) solid var(--color-border);
     border-radius: var(--radius-xl);
     overflow: hidden;
     width: 100%;
     max-width: 100%;
     min-width: 0;
-    box-shadow: var(--shadow-sm);
+    box-shadow: var(--shadow-brutal-md);
     animation: fadeIn var(--transition-normal);
 }
 
 .scheduleHeader {
     padding: var(--spacing-4) var(--spacing-6);
-    border-bottom: 1px solid var(--color-border);
+    border-bottom: var(--border-width) solid var(--color-border);
     background-color: var(--color-bg-subtle);
 }
 
 .scheduleTitle {
+    font-family: var(--font-family-display);
     font-size: 1.125rem;
-    font-weight: 600;
+    font-weight: 700;
     color: var(--color-text-primary);
     margin: 0;
 }
@@ -350,19 +410,20 @@
 .scheduleTable th,
 .scheduleTable td {
     padding: var(--spacing-3) var(--spacing-6);
-    border-bottom: 1px solid var(--color-border);
+    border-bottom: var(--border-width) solid var(--color-border-subtle);
+    font-family: var(--font-family-mono);
     font-variant-numeric: tabular-nums;
     font-size: 0.875rem;
 }
 
 .scheduleTable th {
-    background-color: var(--color-bg-surface);
-    color: var(--color-text-secondary);
-    font-weight: 600;
+    background-color: var(--color-bg-subtle);
+    color: var(--color-text-primary);
+    font-weight: 700;
     position: sticky;
     top: 0;
     z-index: 10;
-    box-shadow: 0 1px 0 var(--color-border);
+    border-bottom: var(--border-width) solid var(--color-border);
 }
 
 .scheduleTable th:first-child,

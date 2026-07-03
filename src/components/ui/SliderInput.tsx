@@ -1,4 +1,4 @@
-import { useRef, useCallback } from 'react';
+import { useRef, useState, useCallback } from 'react';
 import styles from './SliderInput.module.css';
 
 interface SliderInputProps {
@@ -32,6 +32,7 @@ export function SliderInput({
     formatTick,
 }: SliderInputProps) {
     const sliderRef = useRef<HTMLInputElement>(null);
+    const [isDragging, setIsDragging] = useState(false);
 
     const pct = Math.min(100, Math.max(0, ((value - min) / (max - min)) * 100));
 
@@ -48,12 +49,17 @@ export function SliderInput({
         <div className={styles.wrapper}>
             <div className={styles.header}>
                 <span className={styles.label}>{label}</span>
-                <span className={styles.valueBadge}>{format(value)}</span>
+                <span className={`${styles.valueBadge} ${isDragging ? styles.valueBadgeActive : ''}`}>
+                    {format(value)}
+                </span>
             </div>
 
             <div className={styles.sliderTrack}>
                 <div className={styles.sliderFill} style={{ width: `${pct}%` }} />
-                <div className={styles.sliderThumb} style={{ left: `${pct}%` }} />
+                <div
+                    className={`${styles.sliderThumb} ${isDragging ? styles.sliderThumbActive : ''}`}
+                    style={{ left: `${pct}%` }}
+                />
                 <input
                     ref={sliderRef}
                     className={styles.slider}
@@ -63,6 +69,10 @@ export function SliderInput({
                     step={step}
                     value={value}
                     onChange={handleChange}
+                    onPointerDown={() => setIsDragging(true)}
+                    onPointerUp={() => setIsDragging(false)}
+                    onPointerCancel={() => setIsDragging(false)}
+                    onBlur={() => setIsDragging(false)}
                     aria-label={label}
                     aria-valuenow={value}
                     aria-valuemin={min}

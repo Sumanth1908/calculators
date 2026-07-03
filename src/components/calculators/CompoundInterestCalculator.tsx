@@ -2,12 +2,16 @@ import { useState, useMemo } from 'react';
 import { Card, CardContent, CardTitle, CardHeader } from '../ui/Card';
 import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
+import { AnimatedNumber } from '../ui/AnimatedNumber';
+import { BreakdownDonut } from '../ui/BreakdownDonut';
+import { ScenarioActions } from '../ui/ScenarioActions';
 import {
     calculateCompoundInterest,
     calculateCompoundInterestSchedule,
     calculateRD,
     calculateRDSchedule,
     formatCurrency,
+    formatCompactINR,
 } from '../../utils/finance';
 import type {
     CompoundInterestScheduleRow,
@@ -33,10 +37,11 @@ type CalcTab = 'fd' | 'rd';
 
 const tenureSelectStyle = {
     padding: '0.125rem 0.25rem',
-    border: '1px solid var(--color-border)',
+    border: 'var(--border-width) solid var(--color-border)',
     borderRadius: 'var(--radius-sm)',
     backgroundColor: 'var(--color-bg-surface)',
     color: 'var(--color-text-primary)',
+    fontWeight: 700,
     fontSize: '0.75rem',
     cursor: 'pointer',
     opacity: 1,
@@ -45,12 +50,12 @@ const tenureSelectStyle = {
 const frequencySelectStyle = {
     width: '100%',
     padding: '0.625rem 0.75rem',
-    border: '1.5px solid var(--color-border)',
+    border: 'var(--border-width) solid var(--color-border)',
     borderRadius: 'var(--radius-md)',
     backgroundColor: 'var(--color-bg-subtle)',
     color: 'var(--color-text-primary)',
     fontSize: '0.9375rem',
-    fontWeight: 500,
+    fontWeight: 600,
     cursor: 'pointer',
     transition: 'border-color 0.15s',
     outline: 'none',
@@ -224,12 +229,39 @@ function FDCalculator() {
                 {/* Results */}
                 <Card className={styles.resultCard}>
                     <CardHeader>
-                        <CardTitle>Maturity Details</CardTitle>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', flexWrap: 'wrap' }}>
+                            <CardTitle>Maturity Details</CardTitle>
+                            <ScenarioActions
+                                studio="fd"
+                                studioTitle="FD Calculator"
+                                navView="compound"
+                                title={`${formatCompactINR(principal)} · ${rate}% · ${tenure}${tenureUnit === 'years' ? 'y' : 'mo'}`}
+                                inputs={{
+                                    fd_principal: principal,
+                                    fd_rate: rate,
+                                    fd_tenure: tenure,
+                                    fd_tenure_unit: tenureUnit,
+                                    fd_frequency: frequency,
+                                    fd_payout: payoutFrequency,
+                                    fd_start_date: startDate,
+                                    fd_rd_tab: 'fd',
+                                }}
+                                metrics={[
+                                    { label: 'Maturity amount', display: formatCurrency(result.totalAmount, 'en-IN'), value: result.totalAmount, kind: 'currency' },
+                                    { label: 'Total interest', display: formatCurrency(result.totalInterest, 'en-IN'), value: result.totalInterest, kind: 'currency' },
+                                    { label: 'Effective annual yield', display: tenureInYears > 0 && principal > 0 ? `${(((result.totalAmount / principal) - 1) / tenureInYears * 100).toFixed(2)}%` : '—', value: tenureInYears > 0 && principal > 0 ? ((result.totalAmount / principal) - 1) / tenureInYears * 100 : undefined, kind: 'percent' },
+                                ]}
+                            />
+                        </div>
                     </CardHeader>
                     <CardContent>
                         <div className={styles.resultItem}>
                             <span className={styles.resultLabel}>Maturity Amount</span>
-                            <span className={styles.highlight}>{formatCurrency(result.totalAmount, 'en-IN')}</span>
+                            <AnimatedNumber
+                                className={styles.highlight}
+                                value={result.totalAmount}
+                                format={(v) => formatCurrency(v, 'en-IN')}
+                            />
                         </div>
 
                         <hr className={styles.divider} />
@@ -237,23 +269,47 @@ function FDCalculator() {
                         <div className={styles.twoCol} style={{ marginTop: '1rem' }}>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                                 <span className={styles.resultLabel}>Principal</span>
-                                <span className={styles.resultValue}>{formatCurrency(principal, 'en-IN')}</span>
+                                <AnimatedNumber
+                                    className={styles.resultValue}
+                                    value={principal}
+                                    format={(v) => formatCurrency(v, 'en-IN')}
+                                />
                             </div>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', alignItems: 'flex-end' }}>
                                 <span className={styles.resultLabel}>Total Interest</span>
-                                <span className={styles.resultValue} style={{ color: 'var(--color-success)' }}>
-                                    +{formatCurrency(result.totalInterest, 'en-IN')}
-                                </span>
+                                <AnimatedNumber
+                                    className={styles.resultValue}
+                                    style={{ color: 'var(--color-success)' }}
+                                    value={result.totalInterest}
+                                    format={(v) => `+${formatCurrency(v, 'en-IN')}`}
+                                />
                             </div>
                         </div>
 
                         <div className={styles.resultItemTotal}>
                             <span className={styles.resultLabel}>Effective Annual Yield</span>
-                            <span className={styles.resultValue}>
-                                {tenureInYears > 0 && principal > 0
-                                    ? `${(((result.totalAmount / principal) - 1) / tenureInYears * 100).toFixed(2)}%`
-                                    : '—'}
-                            </span>
+                            {tenureInYears > 0 && principal > 0 ? (
+                                <AnimatedNumber
+                                    className={styles.resultValue}
+                                    value={((result.totalAmount / principal) - 1) / tenureInYears * 100}
+                                    format={(v) => `${v.toFixed(2)}%`}
+                                />
+                            ) : (
+                                <span className={styles.resultValue}>—</span>
+                            )}
+                        </div>
+
+                        <div className={styles.donutSection}>
+                            <BreakdownDonut
+                                segments={[
+                                    { name: 'Principal', value: principal, color: 'var(--color-primary-500)' },
+                                    { name: 'Interest', value: result.totalInterest, color: 'var(--color-success)' },
+                                ]}
+                                centerLabel="At Maturity"
+                                centerValue={formatYAxis(result.totalAmount)}
+                                formatValue={(v) => formatCurrency(v, 'en-IN')}
+                                height={180}
+                            />
                         </div>
 
                         <div style={{ height: '270px', width: '100%', marginTop: '2rem', marginBottom: '1rem' }}>
@@ -446,7 +502,7 @@ function RDCalculator() {
                             />
                         </div>
 
-                        <div style={{ padding: '0.75rem', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--color-bg-subtle)', color: 'var(--color-text-secondary)', fontSize: '0.875rem', marginBottom: '1rem' }}>
+                        <div style={{ padding: '0.75rem', borderRadius: 'var(--radius-md)', border: 'var(--border-width) solid var(--color-border)', backgroundColor: 'var(--color-bg-subtle)', color: 'var(--color-text-secondary)', fontSize: '0.875rem', marginBottom: '1rem' }}>
                             🏦 Interest compounded quarterly as per standard Indian banking norms (RBI guidelines).
                         </div>
 
@@ -459,12 +515,37 @@ function RDCalculator() {
                 {/* Results */}
                 <Card className={styles.resultCard}>
                     <CardHeader>
-                        <CardTitle>Maturity Details</CardTitle>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', flexWrap: 'wrap' }}>
+                            <CardTitle>Maturity Details</CardTitle>
+                            <ScenarioActions
+                                studio="rd"
+                                studioTitle="RD Calculator"
+                                navView="compound"
+                                title={`${formatCompactINR(monthly)}/mo · ${rate}% · ${tenure}${tenureUnit === 'years' ? 'y' : 'mo'}`}
+                                inputs={{
+                                    rd_monthly: monthly,
+                                    rd_rate: rate,
+                                    rd_tenure: tenure,
+                                    rd_tenure_unit: tenureUnit,
+                                    rd_start_date: startDate,
+                                    fd_rd_tab: 'rd',
+                                }}
+                                metrics={[
+                                    { label: 'Maturity amount', display: formatCurrency(result.maturityAmount, 'en-IN'), value: result.maturityAmount, kind: 'currency' },
+                                    { label: 'Total deposited', display: formatCurrency(result.totalInvested, 'en-IN'), value: result.totalInvested, kind: 'currency' },
+                                    { label: 'Total interest', display: formatCurrency(result.totalInterest, 'en-IN'), value: result.totalInterest, kind: 'currency' },
+                                ]}
+                            />
+                        </div>
                     </CardHeader>
                     <CardContent>
                         <div className={styles.resultItem}>
                             <span className={styles.resultLabel}>Maturity Amount</span>
-                            <span className={styles.highlight}>{formatCurrency(result.maturityAmount, 'en-IN')}</span>
+                            <AnimatedNumber
+                                className={styles.highlight}
+                                value={result.maturityAmount}
+                                format={(v) => formatCurrency(v, 'en-IN')}
+                            />
                         </div>
 
                         <hr className={styles.divider} />
@@ -472,13 +553,20 @@ function RDCalculator() {
                         <div className={styles.twoCol} style={{ marginTop: '1rem' }}>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                                 <span className={styles.resultLabel}>Total Deposited</span>
-                                <span className={styles.resultValue}>{formatCurrency(result.totalInvested, 'en-IN')}</span>
+                                <AnimatedNumber
+                                    className={styles.resultValue}
+                                    value={result.totalInvested}
+                                    format={(v) => formatCurrency(v, 'en-IN')}
+                                />
                             </div>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', alignItems: 'flex-end' }}>
                                 <span className={styles.resultLabel}>Total Interest</span>
-                                <span className={styles.resultValue} style={{ color: 'var(--color-success)' }}>
-                                    +{formatCurrency(result.totalInterest, 'en-IN')}
-                                </span>
+                                <AnimatedNumber
+                                    className={styles.resultValue}
+                                    style={{ color: 'var(--color-success)' }}
+                                    value={result.totalInterest}
+                                    format={(v) => `+${formatCurrency(v, 'en-IN')}`}
+                                />
                             </div>
                         </div>
 
@@ -487,6 +575,19 @@ function RDCalculator() {
                             <span className={styles.resultValue}>
                                 {formatCurrency(monthly, 'en-IN')} × {tenureInMonths} months
                             </span>
+                        </div>
+
+                        <div className={styles.donutSection}>
+                            <BreakdownDonut
+                                segments={[
+                                    { name: 'Deposited', value: result.totalInvested, color: 'var(--color-primary-500)' },
+                                    { name: 'Interest', value: result.totalInterest, color: 'var(--color-success)' },
+                                ]}
+                                centerLabel="At Maturity"
+                                centerValue={formatYAxis(result.maturityAmount)}
+                                formatValue={(v) => formatCurrency(v, 'en-IN')}
+                                height={180}
+                            />
                         </div>
 
                         <div style={{ height: '270px', width: '100%', marginTop: '2rem', marginBottom: '1rem' }}>
@@ -576,19 +677,22 @@ export function CompoundInterestCalculator() {
                 backgroundColor: 'var(--color-bg-subtle)',
                 padding: '0.25rem',
                 borderRadius: 'var(--radius-md)',
+                border: 'var(--border-width) solid var(--color-border)',
                 maxWidth: '320px',
             }}>
                 <button
                     style={{
                         padding: '0.5rem',
-                        borderRadius: 'var(--radius-md)',
-                        fontWeight: 600,
-                        border: 'none',
-                        backgroundColor: activeTab === 'fd' ? 'var(--color-bg-surface)' : 'transparent',
-                        color: activeTab === 'fd' ? 'var(--color-primary-600)' : 'var(--color-text-secondary)',
-                        boxShadow: activeTab === 'fd' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                        borderRadius: 'var(--radius-sm)',
+                        fontFamily: 'var(--font-family-display)',
+                        fontWeight: 700,
+                        border: 'var(--border-width) solid',
+                        borderColor: activeTab === 'fd' ? 'var(--color-border)' : 'transparent',
+                        backgroundColor: activeTab === 'fd' ? 'var(--color-primary-500)' : 'transparent',
+                        color: activeTab === 'fd' ? '#ffffff' : 'var(--color-text-secondary)',
+                        boxShadow: activeTab === 'fd' ? 'var(--shadow-brutal-sm)' : 'none',
                         cursor: 'pointer',
-                        transition: 'all 0.2s',
+                        transition: 'all 0.15s',
                         fontSize: '0.9375rem',
                     }}
                     onClick={() => setActiveTab('fd')}
@@ -598,14 +702,16 @@ export function CompoundInterestCalculator() {
                 <button
                     style={{
                         padding: '0.5rem',
-                        borderRadius: 'var(--radius-md)',
-                        fontWeight: 600,
-                        border: 'none',
-                        backgroundColor: activeTab === 'rd' ? 'var(--color-bg-surface)' : 'transparent',
-                        color: activeTab === 'rd' ? 'var(--color-primary-600)' : 'var(--color-text-secondary)',
-                        boxShadow: activeTab === 'rd' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                        borderRadius: 'var(--radius-sm)',
+                        fontFamily: 'var(--font-family-display)',
+                        fontWeight: 700,
+                        border: 'var(--border-width) solid',
+                        borderColor: activeTab === 'rd' ? 'var(--color-border)' : 'transparent',
+                        backgroundColor: activeTab === 'rd' ? 'var(--color-primary-500)' : 'transparent',
+                        color: activeTab === 'rd' ? '#ffffff' : 'var(--color-text-secondary)',
+                        boxShadow: activeTab === 'rd' ? 'var(--shadow-brutal-sm)' : 'none',
                         cursor: 'pointer',
-                        transition: 'all 0.2s',
+                        transition: 'all 0.15s',
                         fontSize: '0.9375rem',
                     }}
                     onClick={() => setActiveTab('rd')}
